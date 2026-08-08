@@ -22,4 +22,14 @@ public class EmailOptions
     /// RedirectAllTo este activo y cuando coincide con el destinatario.
     /// </summary>
     public string BccAll { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Origen absoluto del CLIENTE para los enlaces de correos compuestos fuera de una
+    /// peticion. El digest de alertas lo necesita porque el motor corre desde un cron y no
+    /// tiene request del que deducir el host. Sin barra final.
+    ///
+    /// Vacio significa "usa App:ClientBaseUrl", que es lo correcto en desarrollo; solo hay que
+    /// rellenarlo si el correo debe apuntar a un dominio distinto del configurado ahi.
+    /// </summary>
+    public string PublicBaseUrl { get; set; } = string.Empty;
 }

@@ -17,6 +17,9 @@ public static class AntiforgeryTokens
     public const string RequestCookieName = "XSRF-TOKEN";
     public const string SecretCookieName = ".rentca.antiforgery";
 
+    /// <summary>Identifica el fallo de antiforgery en el cuerpo del problema.</summary>
+    public const string AntiforgeryFailureCode = "antiforgery_invalid";
+
     public static void Issue(HttpContext context, IAntiforgery antiforgery)
     {
         var tokens = antiforgery.GetAndStoreTokens(context);
@@ -54,9 +57,13 @@ public static class AntiforgeryTokens
         }
         catch (AntiforgeryValidationException)
         {
+            // El codigo va en las extensiones y no solo en el titulo para que el cliente pueda
+            // reconocer este fallo concreto —y reintentar con un token nuevo— sin tener que
+            // comparar cadenas de texto que cambian con cualquier retoque de redaccion.
             return Results.Problem(
                 title: "Invalid antiforgery token.",
-                statusCode: StatusCodes.Status400BadRequest);
+                statusCode: StatusCodes.Status400BadRequest,
+                extensions: new Dictionary<string, object?> { ["code"] = AntiforgeryFailureCode });
         }
 
         return await next(context);

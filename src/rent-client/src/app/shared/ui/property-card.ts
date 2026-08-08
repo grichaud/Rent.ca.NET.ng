@@ -5,13 +5,14 @@ import { TranslocoService } from '@jsverse/transloco';
 import { PropertyCard as PropertyCardModel, PropertyType } from '../../core/api/api.types';
 import { CultureService } from '../../core/i18n/culture.service';
 import { formatPrice, formatTemplate } from '../format';
+import { FavoriteButton } from './favorite-button';
 import { Icon } from './icon/icon';
 
 /** Port de Features/Search/Partials/_PropertyCard.cshtml, con sus dos variantes. */
 @Component({
   selector: 'app-property-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, Icon, NgTemplateOutlet],
+  imports: [RouterLink, Icon, NgTemplateOutlet, FavoriteButton],
   template: `
     @if (variant() === 'list') {
       <article
@@ -52,6 +53,11 @@ import { Icon } from './icon/icon';
                 </span>
               }
             </div>
+            <app-favorite-button
+              class="shrink-0"
+              [propertyId]="item().id"
+              [initialFavorited]="item().isFavorited"
+            />
           </div>
 
           <div>
@@ -130,6 +136,7 @@ import { Icon } from './icon/icon';
           </div>
 
           <div class="absolute top-3 right-3 flex flex-col gap-1.5 items-end">
+            <app-favorite-button [propertyId]="item().id" [initialFavorited]="item().isFavorited" />
             @if (item().isVerified) {
               <span
                 class="inline-flex items-center gap-1 bg-emerald-500/90 backdrop-blur-md text-white text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded-md"

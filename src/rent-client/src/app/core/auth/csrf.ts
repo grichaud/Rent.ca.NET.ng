@@ -1,10 +1,13 @@
-import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
 import { DOCUMENT, isPlatformServer } from '@angular/common';
 import { PLATFORM_ID, inject } from '@angular/core';
-import { from, switchMap } from 'rxjs';
+import { catchError, from, switchMap, throwError } from 'rxjs';
 
 export const XSRF_COOKIE = 'XSRF-TOKEN';
 export const XSRF_HEADER = 'X-XSRF-TOKEN';
+
+/** Codigo que la API devuelve cuando el token no vale. Debe coincidir con AntiforgeryTokens. */
+const ANTIFORGERY_FAILURE = 'antiforgery_invalid';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -35,12 +38,18 @@ export async function fetchXsrfToken(document: Document): Promise<string | null>
 }
 
 /**
- * Garantiza que toda peticion que muta estado lleve el token de antiforgery.
+ * Garantiza que toda peticion que muta estado lleve un token de antiforgery VALIDO.
  *
  * Se hace a mano en vez de con `withXsrfConfiguration` porque el interceptor que trae Angular
  * ignora las URLs absolutas —y en SSR la base de la API lo es— y, sobre todo, porque no sabe
- * que el token hay que renovarlo: el de ASP.NET va ligado a la identidad, asi que el emitido
- * siendo anonimo deja de ser valido en cuanto hay sesion. Ver AuthService.refreshCsrf.
+ * nada de renovar el token.
+ *
+ * Y hay que renovarlo mas de lo que parece: el token de ASP.NET va ligado a la identidad, asi
+ * que deja de valer en cuanto la sesion cambia. `AuthService.refreshCsrf` cubre los cambios que
+ * nacen aqui (entrar, registrarse, salir), pero no los que ocurren fuera: otra pestana, una
+ * cookie caducada o una sesion cerrada desde otro sitio dejan una cookie que parece buena y no
+ * lo es. Por eso, ante un rechazo por token invalido, se pide uno nuevo y se reintenta UNA vez;
+ * sin esto el usuario ve "Invalid antiforgery token" y solo se arregla recargando a mano.
  */
 export const csrfInterceptor: HttpInterceptorFn = (req, next) => {
   const platformId = inject(PLATFORM_ID);
@@ -51,14 +60,28 @@ export const csrfInterceptor: HttpInterceptorFn = (req, next) => {
     return next(req);
   }
 
-  const existing = readXsrfCookie(document);
-  if (existing) {
-    return next(req.clone({ setHeaders: { [XSRF_HEADER]: existing } }));
-  }
+  const send = (token: string | null) =>
+    next(token ? withToken(req, token) : req).pipe(
+      catchError((error: unknown) => {
+        if (!isAntiforgeryFailure(error)) return throwError(() => error);
 
-  return from(fetchXsrfToken(document)).pipe(
-    switchMap((token) =>
-      next(token ? req.clone({ setHeaders: { [XSRF_HEADER]: token } }) : req),
-    ),
-  );
+        // Un solo reintento: si el token recien pedido tampoco vale, el problema es otro y
+        // repetir en bucle solo escondera la causa real.
+        return from(fetchXsrfToken(document)).pipe(
+          switchMap((fresh) => (fresh ? next(withToken(req, fresh)) : throwError(() => error))),
+        );
+      }),
+    );
+
+  const existing = readXsrfCookie(document);
+  return existing ? send(existing) : from(fetchXsrfToken(document)).pipe(switchMap(send));
 };
+
+function withToken(req: HttpRequest<unknown>, token: string): HttpRequest<unknown> {
+  return req.clone({ setHeaders: { [XSRF_HEADER]: token } });
+}
+
+function isAntiforgeryFailure(error: unknown): boolean {
+  if (!(error instanceof HttpErrorResponse) || error.status !== 400) return false;
+  return (error.error as { code?: string } | null)?.code === ANTIFORGERY_FAILURE;
+}

@@ -26,4 +26,20 @@ public class NoOpEmailSender : IEmailSender
             data.ToEmail, data.ResetUrl);
         return Task.CompletedTask;
     }
+
+    public Task SendInquiryToLandlordAsync(InquiryEmail data, CancellationToken ct = default)
+    {
+        _logger.LogInformation(
+            "[NoOp] Inquiry email skipped (no API key). To={Email} Property={Title}",
+            data.LandlordEmail, data.PropertyTitle);
+        return Task.CompletedTask;
+    }
+
+    public Task SendAlertDigestAsync(AlertDigestEmail data, CancellationToken ct = default)
+    {
+        _logger.LogInformation(
+            "[NoOp] Alert digest skipped (no API key). To={Email} Matches={Count}",
+            data.ToEmail, data.TotalMatches);
+        return Task.CompletedTask;
+    }
 }

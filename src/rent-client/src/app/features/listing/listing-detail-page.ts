@@ -1,12 +1,16 @@
 import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { combineLatest, catchError, map, of, switchMap } from 'rxjs';
 import { ApiService } from '../../core/api/api.service';
+import { InquiriesService } from '../../core/api/inquiries.service';
 import { Amenity, LeaseTerm, ListingDetail, PropertyType } from '../../core/api/api.types';
 import { CultureService } from '../../core/i18n/culture.service';
+import { toFieldErrors } from '../auth/ui/auth-errors';
 import { formatPrice, formatTemplate } from '../../shared/format';
+import { FavoriteButton } from '../../shared/ui/favorite-button';
 import { Icon } from '../../shared/ui/icon/icon';
 import { PropertyCardComponent } from '../../shared/ui/property-card';
 
@@ -41,7 +45,9 @@ const GALLERY_GRADIENTS = [
 @Component({
   selector: 'app-listing-detail-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslocoPipe, Icon, PropertyCardComponent],
+  imports: [
+    RouterLink, TranslocoPipe, ReactiveFormsModule, Icon, PropertyCardComponent, FavoriteButton,
+  ],
   template: `
     @if (listing(); as p) {
       @if (p.id === '') {
@@ -157,6 +163,13 @@ const GALLERY_GRADIENTS = [
                   <h1 class="font-sans font-bold tracking-tight text-3xl md:text-4xl text-slate-900 dark:text-white">
                     {{ p.title }}
                   </h1>
+                  <div class="flex items-center gap-2 shrink-0">
+                    <app-favorite-button
+                      variant="detail"
+                      [propertyId]="p.id"
+                      [initialFavorited]="p.isFavorited"
+                    />
+                  </div>
                 </div>
                 <p class="text-slate-600 dark:text-white/60 mt-2 inline-flex items-start gap-1.5">
                   <app-icon name="map-pin" class="h-4 w-4 mt-1 shrink-0 text-brand-500" />
@@ -352,22 +365,56 @@ const GALLERY_GRADIENTS = [
                   </div>
                 }
 
-                <!-- El envio de la consulta se conecta con POST /api/inquiries en la Fase 7. -->
                 <h2 class="font-semibold text-slate-900 dark:text-white mb-3">
                   {{ 'detail.contactLandlordTitle' | transloco }}
                 </h2>
-                <form class="space-y-3" (submit)="$event.preventDefault()">
-                  <input class="glass-input" [placeholder]="'detail.formName' | transloco" autocomplete="name" />
-                  <input class="glass-input" type="email" [placeholder]="'detail.formEmail' | transloco" autocomplete="email" />
-                  <input class="glass-input" type="tel" [placeholder]="'detail.formPhone' | transloco" autocomplete="tel" />
-                  <textarea
-                    class="glass-input min-h-[110px]"
-                    [placeholder]="'detail.formMessagePlaceholder' | transloco"
-                  ></textarea>
-                  <button type="submit" class="glass-button-primary w-full py-2.5 text-sm font-semibold">
-                    {{ 'detail.sendInquiry' | transloco }}
-                  </button>
-                </form>
+
+                @if (inquirySent()) {
+                  <div
+                    role="status"
+                    class="p-3 rounded-lg border border-emerald-300 bg-emerald-50 dark:border-emerald-500/40 dark:bg-emerald-500/10 text-sm text-emerald-700 dark:text-emerald-300"
+                  >
+                    {{ 'detail.inquirySent' | transloco }}
+                  </div>
+                } @else {
+                  <form class="space-y-3" [formGroup]="inquiryForm" (ngSubmit)="submitInquiry(p.id)">
+                    @for (message of inquiryErrors(); track message) {
+                      <p role="alert" class="text-sm text-red-600 dark:text-red-400">{{ message }}</p>
+                    }
+                    <input
+                      class="glass-input"
+                      formControlName="senderName"
+                      [placeholder]="'detail.formName' | transloco"
+                      autocomplete="name"
+                    />
+                    <input
+                      class="glass-input"
+                      type="email"
+                      formControlName="senderEmail"
+                      [placeholder]="'detail.formEmail' | transloco"
+                      autocomplete="email"
+                    />
+                    <input
+                      class="glass-input"
+                      type="tel"
+                      formControlName="senderPhone"
+                      [placeholder]="'detail.formPhone' | transloco"
+                      autocomplete="tel"
+                    />
+                    <textarea
+                      class="glass-input min-h-[110px]"
+                      formControlName="message"
+                      [placeholder]="'detail.formMessagePlaceholder' | transloco"
+                    ></textarea>
+                    <button
+                      type="submit"
+                      [disabled]="inquirySending()"
+                      class="glass-button-primary w-full py-2.5 text-sm font-semibold disabled:opacity-60"
+                    >
+                      {{ 'detail.sendInquiry' | transloco }}
+                    </button>
+                  </form>
+                }
               </div>
 
               @if (p.landlord; as landlord) {
@@ -509,11 +556,74 @@ const GALLERY_GRADIENTS = [
 })
 export class ListingDetailPage {
   private readonly api = inject(ApiService);
+  private readonly inquiries = inject(InquiriesService);
   private readonly route = inject(ActivatedRoute);
   private readonly transloco = inject(TranslocoService);
+  private readonly fb = inject(FormBuilder);
   protected readonly culture = inject(CultureService);
 
   private readonly similarTrack = viewChild<ElementRef<HTMLElement>>('similarTrack');
+
+  protected readonly inquiryForm = this.fb.nonNullable.group({
+    senderName: ['', Validators.required],
+    senderEmail: ['', [Validators.required, Validators.email]],
+    senderPhone: [''],
+    message: ['', [Validators.required, Validators.minLength(10)]],
+  });
+
+  protected readonly inquirySending = signal(false);
+  protected readonly inquirySent = signal(false);
+  protected readonly inquiryErrors = signal<string[]>([]);
+
+  protected submitInquiry(propertyId: string): void {
+    if (this.inquiryForm.invalid || this.inquirySending()) {
+      this.inquiryForm.markAllAsTouched();
+      return;
+    }
+
+    this.inquirySending.set(true);
+    this.inquiryErrors.set([]);
+
+    const { senderName, senderEmail, senderPhone, message } = this.inquiryForm.getRawValue();
+
+    this.inquiries
+      .submit({
+        propertyId,
+        senderName,
+        senderEmail,
+        senderPhone: senderPhone || null,
+        message,
+        moveInDate: null,
+        culture: this.culture.culture(),
+      })
+      .subscribe({
+        next: () => {
+          this.inquirySending.set(false);
+          // El formulario se sustituye por el acuse de recibo, como en el origen: dejarlo a
+          // la vista invita a mandar la misma consulta dos veces.
+          this.inquirySent.set(true);
+        },
+        error: (error: unknown) => {
+          this.inquirySending.set(false);
+          this.inquiryErrors.set(this.toMessages(error));
+        },
+      });
+  }
+
+  /**
+   * La API devuelve CLAVES de traduccion en el titulo de sus problemas —no sabe en que idioma
+   * esta la pantalla— y mensajes literales en los errores por campo, igual que el origen. Se
+   * intenta traducir cada uno y lo que no sea una clave conocida se muestra tal cual.
+   */
+  private toMessages(error: unknown): string[] {
+    const errors = toFieldErrors(error, 'Could not send your inquiry. Please try again.');
+    return Object.values(errors)
+      .flat()
+      .map((message) => {
+        const translated = this.transloco.translate(message);
+        return translated === message ? message : translated;
+      });
+  }
 
   protected readonly gradients = GALLERY_GRADIENTS;
   protected readonly activeTab = signal<Tab>('floorplans');

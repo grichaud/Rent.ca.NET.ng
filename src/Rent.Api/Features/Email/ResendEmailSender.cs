@@ -42,7 +42,22 @@ public class ResendEmailSender : IEmailSender
         return SendAsync(data.ToEmail, subject, html, ct);
     }
 
-    private async Task SendAsync(string to, string subject, string html, CancellationToken ct)
+    public Task SendInquiryToLandlordAsync(InquiryEmail data, CancellationToken ct = default)
+    {
+        var (subject, html) = EmailTemplates.Inquiry(data);
+        // replyTo apunta a quien pregunta: asi el propietario responde con "Responder" y el
+        // correo llega al interesado, no al remitente tecnico de la plataforma.
+        return SendAsync(data.LandlordEmail, subject, html, ct, replyTo: data.SenderEmail);
+    }
+
+    public Task SendAlertDigestAsync(AlertDigestEmail data, CancellationToken ct = default)
+    {
+        var (subject, html) = EmailTemplates.AlertDigest(data);
+        return SendAsync(data.ToEmail, subject, html, ct);
+    }
+
+    private async Task SendAsync(
+        string to, string subject, string html, CancellationToken ct, string? replyTo = null)
     {
         var from = string.IsNullOrWhiteSpace(_options.FromName)
             ? _options.FromAddress
@@ -61,7 +76,7 @@ public class ResendEmailSender : IEmailSender
             bcc = [_options.BccAll];
         }
 
-        var payload = new ResendRequest(from, [recipient], subject, html, bcc);
+        var payload = new ResendRequest(from, [recipient], subject, html, replyTo, bcc);
 
         using var response = await _http.PostAsJsonAsync("emails", payload, JsonOptions, ct);
         var body = await response.Content.ReadAsStringAsync(ct);
@@ -80,7 +95,8 @@ public class ResendEmailSender : IEmailSender
             "Resend accepted {Subject} for {To} (id={Id}).", subject, to, parsed?.Id ?? "(none)");
     }
 
-    private record ResendRequest(string From, string[] To, string Subject, string Html, string[]? Bcc);
+    private record ResendRequest(
+        string From, string[] To, string Subject, string Html, string? ReplyTo, string[]? Bcc);
 
     private record ResendResponse(string? Id);
 }

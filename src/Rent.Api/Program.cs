@@ -3,9 +3,13 @@ using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Rent.Api.Domain;
+using Rent.Api.Features.Alerts;
+using Rent.Api.Features.Alerts.Engine;
 using Rent.Api.Features.Auth;
 using Rent.Api.Features.Email;
+using Rent.Api.Features.Favorites;
 using Rent.Api.Features.Home;
+using Rent.Api.Features.Inquiries;
 using Rent.Api.Features.Listings;
 using Rent.Api.Features.Maps;
 using Rent.Api.Features.Search;
@@ -67,6 +71,8 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 // Servicios de negocio portados del origen sin cambios.
 builder.Services.AddScoped<SearchHandler>();
+builder.Services.AddScoped<AlertMatcher>();
+builder.Services.AddScoped<IAlertDigestService, AlertDigestService>();
 builder.Services.AddScoped<MapMarkersHandler>();
 builder.Services.AddScoped<Rent.Api.Features.Favorites.IFavoriteService,
     Rent.Api.Features.Favorites.FavoriteService>();
@@ -74,6 +80,9 @@ builder.Services.AddScoped<Rent.Api.Features.Admin.Services.IPopularSearchTracke
     Rent.Api.Features.Admin.Services.PopularSearchTracker>();
 
 builder.Services.Configure<MapsOptions>(builder.Configuration.GetSection(MapsOptions.SectionName));
+
+builder.Services.Configure<AlertEngineOptions>(
+    builder.Configuration.GetSection(AlertEngineOptions.SectionName));
 
 // Correo transaccional. Sin clave de Resend se usa el sustituto que solo escribe en el log,
 // para que un entorno sin credenciales siga permitiendo altas y restablecer contrasena.
@@ -131,6 +140,12 @@ app.MapMapEndpoints();
 
 // Autenticacion (Fase 6).
 app.MapAuthEndpoints();
+
+// Consultas, favoritos y alertas (Fase 7).
+app.MapInquiryEndpoints();
+app.MapFavoriteEndpoints();
+app.MapAlertEndpoints();
+app.MapAlertDispatchEndpoint();
 
 if (!builder.Configuration.IsGoogleConfigured())
 {

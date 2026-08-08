@@ -196,34 +196,8 @@ public class AuthEndpointsTests : IClassFixture<AuthApiFactory>
         Assert.False(response!.Valid);
     }
 
-    /// <summary>
-    /// Reproduce lo que hace Angular: pedir el token, leerlo de la cookie <c>XSRF-TOKEN</c> y
-    /// reenviarlo en la cabecera. Las cookies las conserva el handler del cliente de prueba.
-    /// </summary>
-    private static async Task ArmAntiforgeryAsync(HttpClient client)
-    {
-        var response = await client.GetAsync("/api/auth/csrf");
-        response.EnsureSuccessStatusCode();
-
-        var token = ReadSetCookie(response, "XSRF-TOKEN");
-        Assert.False(string.IsNullOrEmpty(token), "El endpoint /csrf debe emitir la cookie XSRF-TOKEN.");
-
-        client.DefaultRequestHeaders.Remove("X-XSRF-TOKEN");
-        client.DefaultRequestHeaders.Add("X-XSRF-TOKEN", token);
-    }
-
-    private static string? ReadSetCookie(HttpResponseMessage response, string name)
-    {
-        if (!response.Headers.TryGetValues("Set-Cookie", out var cookies)) return null;
-
-        foreach (var cookie in cookies)
-        {
-            var parts = cookie.Split(';')[0].Split('=', 2);
-            if (parts.Length == 2 && parts[0] == name) return Uri.UnescapeDataString(parts[1]);
-        }
-
-        return null;
-    }
+    /// <summary>Vive en TestClientExtensions: lo comparten los tests de las dos fases.</summary>
+    private static Task ArmAntiforgeryAsync(HttpClient client) => client.ArmAntiforgeryAsync();
 
     private sealed record AuthResponseDto(CurrentUserResponse User, string RedirectPath);
 
