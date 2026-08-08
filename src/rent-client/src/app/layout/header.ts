@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { AuthService } from '../core/auth/auth.service';
 import { CultureService } from '../core/i18n/culture.service';
 import { ThemeService } from '../core/theme/theme.service';
 import { Icon } from '../shared/ui/icon/icon';
@@ -46,20 +47,45 @@ import { BrandLogo } from './brand-logo';
             <span class="tracking-wider">{{ culture.alternate().toUpperCase() }}</span>
           </a>
 
-          <a
-            [routerLink]="['/', culture.culture(), 'login']"
-            class="hidden sm:inline-flex items-center gap-2 glass-button !px-4 py-2 text-sm font-medium text-slate-700 dark:text-white"
-          >
-            <app-icon name="log-in" class="h-4 w-4" />
-            <span>{{ 'common.signIn' | transloco }}</span>
-          </a>
-          <a
-            [routerLink]="['/', culture.culture(), 'signup']"
-            class="hidden sm:inline-flex items-center gap-2 glass-button-primary !px-4 py-2 text-sm font-medium"
-          >
-            <app-icon name="user-plus" class="h-4 w-4" />
-            <span>{{ 'common.signUp' | transloco }}</span>
-          </a>
+          @if (auth.user(); as user) {
+            <a
+              [routerLink]="portalLink()"
+              class="hidden sm:inline-flex items-center gap-2 glass-button !px-3 py-2 text-sm font-medium text-slate-700 dark:text-white cursor-pointer"
+            >
+              <span
+                class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand-500/20 border border-brand-400/40"
+              >
+                <app-icon name="user" class="h-4 w-4 text-brand-600 dark:text-brand-400" />
+              </span>
+              <span class="max-w-[120px] truncate text-slate-700 dark:text-white/80">{{
+                user.fullName || user.email
+              }}</span>
+            </a>
+            <button
+              type="button"
+              (click)="logout()"
+              class="hidden sm:inline-flex glass-button items-center gap-2 !px-3 py-2 text-sm font-medium text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white"
+              [attr.aria-label]="'common.logout' | transloco"
+            >
+              <app-icon name="log-out" class="h-4 w-4" />
+              <span class="hidden lg:inline">{{ 'common.logout' | transloco }}</span>
+            </button>
+          } @else {
+            <a
+              [routerLink]="['/', culture.culture(), 'login']"
+              class="hidden sm:inline-flex items-center gap-2 glass-button !px-4 py-2 text-sm font-medium text-slate-700 dark:text-white"
+            >
+              <app-icon name="log-in" class="h-4 w-4" />
+              <span>{{ 'common.signIn' | transloco }}</span>
+            </a>
+            <a
+              [routerLink]="['/', culture.culture(), 'signup']"
+              class="hidden sm:inline-flex items-center gap-2 glass-button-primary !px-4 py-2 text-sm font-medium"
+            >
+              <app-icon name="user-plus" class="h-4 w-4" />
+              <span>{{ 'common.signUp' | transloco }}</span>
+            </a>
+          }
 
           <button
             type="button"
@@ -138,22 +164,41 @@ import { BrandLogo } from './brand-logo';
             </a>
           </div>
 
-          <a
-            [routerLink]="['/', culture.culture(), 'login']"
-            (click)="drawerOpen.set(false)"
-            class="glass-button w-full inline-flex items-center justify-center gap-2 !px-4 py-3 text-sm text-slate-700 dark:text-white font-medium"
-          >
-            <app-icon name="log-in" class="h-4 w-4" />
-            <span>{{ 'common.signIn' | transloco }}</span>
-          </a>
-          <a
-            [routerLink]="['/', culture.culture(), 'signup']"
-            (click)="drawerOpen.set(false)"
-            class="glass-button-primary w-full inline-flex items-center justify-center gap-2 !px-4 py-3 text-sm font-medium"
-          >
-            <app-icon name="user-plus" class="h-4 w-4" />
-            <span>{{ 'common.signUp' | transloco }}</span>
-          </a>
+          @if (auth.isAuthenticated()) {
+            <a
+              [routerLink]="portalLink()"
+              (click)="drawerOpen.set(false)"
+              class="glass-button w-full inline-flex items-center justify-center gap-2 !px-4 py-3 text-sm text-slate-700 dark:text-white font-medium"
+            >
+              <app-icon name="user" class="h-4 w-4" />
+              <span>{{ auth.user()?.fullName || auth.user()?.email }}</span>
+            </a>
+            <button
+              type="button"
+              (click)="drawerOpen.set(false); logout()"
+              class="glass-button w-full inline-flex items-center justify-center gap-2 !px-4 py-3 text-sm text-slate-700 dark:text-white font-medium"
+            >
+              <app-icon name="log-out" class="h-4 w-4" />
+              <span>{{ 'common.logout' | transloco }}</span>
+            </button>
+          } @else {
+            <a
+              [routerLink]="['/', culture.culture(), 'login']"
+              (click)="drawerOpen.set(false)"
+              class="glass-button w-full inline-flex items-center justify-center gap-2 !px-4 py-3 text-sm text-slate-700 dark:text-white font-medium"
+            >
+              <app-icon name="log-in" class="h-4 w-4" />
+              <span>{{ 'common.signIn' | transloco }}</span>
+            </a>
+            <a
+              [routerLink]="['/', culture.culture(), 'signup']"
+              (click)="drawerOpen.set(false)"
+              class="glass-button-primary w-full inline-flex items-center justify-center gap-2 !px-4 py-3 text-sm font-medium"
+            >
+              <app-icon name="user-plus" class="h-4 w-4" />
+              <span>{{ 'common.signUp' | transloco }}</span>
+            </a>
+          }
         </div>
       </aside>
     </div>
@@ -162,7 +207,28 @@ import { BrandLogo } from './brand-logo';
 export class Header {
   protected readonly culture = inject(CultureService);
   protected readonly theme = inject(ThemeService);
+  protected readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
   protected readonly drawerOpen = signal(false);
+
+  /** El portal del rol mas privilegiado, igual que el `portalHref` del layout del origen. */
+  protected readonly portalLink = computed(() => {
+    const roles = this.auth.user()?.roles ?? [];
+    const segment = roles.includes('Admin')
+      ? 'admin'
+      : roles.includes('Landlord')
+        ? 'landlord'
+        : 'renter';
+    return ['/', this.culture.culture(), segment];
+  });
+
+  protected logout(): void {
+    this.auth.logout().subscribe({
+      // A la home de la cultura activa: quedarse en una pantalla que quiza exigia sesion
+      // dejaria al usuario mirando un rebote al login.
+      next: () => void this.router.navigate(['/', this.culture.culture()]),
+    });
+  }
 
   protected readonly navLinks = [
     { path: '', key: 'common.rent', icon: 'home' },

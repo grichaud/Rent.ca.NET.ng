@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { authGuard, roleGuard } from './core/auth/auth.guard';
 
 /**
  * Las rutas se declaran una vez por cultura (`/en/...`, `/fr/...`) en lugar de usar un
@@ -36,20 +37,50 @@ function localeRoutes(): Routes {
       loadComponent: () => import('./shared/ui/page-placeholder').then((m) => m.PagePlaceholder),
       data: { title: 'For Landlords' },
     },
+    // Las pantallas de autenticacion cuelgan de AuthShell, que las presenta centradas y sin
+    // barra de navegacion, igual que el _LayoutAuth.cshtml del origen.
     {
-      path: 'login',
-      loadComponent: () => import('./shared/ui/page-placeholder').then((m) => m.PagePlaceholder),
-      data: { title: 'Sign In' },
-    },
-    {
-      path: 'signup',
-      loadComponent: () => import('./shared/ui/page-placeholder').then((m) => m.PagePlaceholder),
-      data: { title: 'Sign Up' },
+      path: '',
+      loadComponent: () => import('./layout/auth-shell').then((m) => m.AuthShell),
+      children: [
+        {
+          path: 'login',
+          loadComponent: () => import('./features/auth/login-page').then((m) => m.LoginPage),
+        },
+        {
+          path: 'signup',
+          loadComponent: () => import('./features/auth/signup-page').then((m) => m.SignupPage),
+        },
+        {
+          path: 'forgot-password',
+          loadComponent: () =>
+            import('./features/auth/forgot-password-page').then((m) => m.ForgotPasswordPage),
+        },
+        {
+          path: 'reset-password',
+          loadComponent: () =>
+            import('./features/auth/reset-password-page').then((m) => m.ResetPasswordPage),
+        },
+        {
+          path: 'external-login-confirm',
+          loadComponent: () =>
+            import('./features/auth/external-login-confirm-page').then(
+              (m) => m.ExternalLoginConfirmPage,
+            ),
+        },
+      ],
     },
     {
       path: 'landlord',
       loadComponent: () => import('./shared/ui/page-placeholder').then((m) => m.PagePlaceholder),
       data: { title: 'Landlord Dashboard' },
+      canActivate: [roleGuard('Landlord')],
+    },
+    {
+      path: 'renter',
+      loadComponent: () => import('./shared/ui/page-placeholder').then((m) => m.PagePlaceholder),
+      data: { title: 'Renter Dashboard' },
+      canActivate: [authGuard],
     },
 
     // Deben ir al final: capturan cualquier segmento y taparian a las rutas de arriba.

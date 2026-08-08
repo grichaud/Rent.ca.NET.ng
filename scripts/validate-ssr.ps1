@@ -1,7 +1,11 @@
 $ErrorActionPreference = 'Continue'
-$pad = "C:\Users\giori\AppData\Local\Temp\claude\c--Users-giori-source-repos-Rent-ca-NET-ng\1b79bd47-e612-4a0a-a171-8ba91a734390\scratchpad"
-$bin = "C:\Users\giori\source\repos\Rent.ca.NET.ng\src\Rent.Api\bin\Debug\net9.0"
-$cli = "C:\Users\giori\source\repos\Rent.ca.NET.ng\src\rent-client"
+# Rutas relativas al repo: la version anterior apuntaba al scratchpad de una sesion concreta y
+# dejaba de escribir logs en cuanto esa carpeta desaparecia.
+$repo = Split-Path -Parent $PSScriptRoot
+$pad = Join-Path $env:TEMP 'rentca-ssr-logs'
+New-Item -ItemType Directory -Force -Path $pad | Out-Null
+$bin = Join-Path $repo 'src\Rent.Api\bin\Debug\net9.0'
+$cli = Join-Path $repo 'src\rent-client'
 
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
 $env:ASPNETCORE_URLS = 'http://localhost:5282'
@@ -24,13 +28,17 @@ $routes = @(
   @('/en/toronto',                              'Rentals in'),
   @('/en/toronto?view=list',                    'Rentals in'),
   @('/en/toronto/luxury-loft-liberty-village',  'Available units'),
-  @('/en/about',                                'About_Title1|Built for'),
+  @('/en/about',                                'Our Mission'),
   @('/en/faq',                                  'Faq_Title|Frequently'),
   @('/en/privacy',                              'Privacy'),
   @('/fr',                                      'Villes|Trouvez'),
   @('/fr/toronto',                              'Louer|logement'),
   @('/fr/about',                                'propos|Con'),
-  @('/fr/faq',                                  'quentes|questions|FAQ')
+  @('/fr/faq',                                  'quentes|questions|FAQ'),
+  @('/en/login',                                'Welcome back'),
+  @('/en/signup',                               'Create your account'),
+  @('/en/forgot-password',                      'Reset your password'),
+  @('/fr/login',                                'Bon retour')
 )
 
 Write-Output 'ruta                                          bytes   estado'

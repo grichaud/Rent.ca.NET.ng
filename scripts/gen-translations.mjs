@@ -9,7 +9,7 @@ const out = process.argv[3];
 const DOTTED = new Set([
   'common', 'navbar', 'footer', 'listings', 'filters', 'detail',
   'hero', 'results', 'sort', 'cities', 'stats', 'gallery', 'map', 'validation',
-  'landlordPage', 'aiChat',
+  'landlordPage', 'aiChat', 'auth',
 ]);
 const FLAT = /^(About|Faq|Landlords)_/;
 
@@ -48,8 +48,8 @@ const header = `/**
  * al servidor de render a pedirse los JSON a si mismo, y una peticion lenta o fallida
  * dejaria el HTML servido con las claves sin traducir — justo lo que el SSR evita.
  *
- * Faltan a proposito los grupos auth, landlord, renter, admin y aiChat: se anaden cuando
- * se porten esas pantallas, para no cargar el bundle inicial con texto que nadie usa.
+ * Faltan a proposito los grupos landlord, renter y admin: se anaden cuando se porten esas
+ * pantallas, para no cargar el bundle inicial con texto que nadie usa.
  */
 `;
 

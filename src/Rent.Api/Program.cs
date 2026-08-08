@@ -1,17 +1,18 @@
 using System.Text.Json.Serialization;
+using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Rent.Api.Domain;
+using Rent.Api.Features.Auth;
+using Rent.Api.Features.Email;
 using Rent.Api.Features.Home;
 using Rent.Api.Features.Listings;
 using Rent.Api.Features.Maps;
 using Rent.Api.Features.Search;
 using Rent.Api.Infrastructure.Data;
 using Rent.Api.Infrastructure.Data.Seed;
+using Rent.Api.Infrastructure.Identity;
 using Rent.Api.Infrastructure.Storage;
-
-// Fase 2 del PRP: dominio y base de datos. Los endpoints llegan en la Fase 3 y la
-// configuracion de auth para SPA (401 en /api/*, antiforgery) en la Fase 6.
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,6 +59,12 @@ builder.Services
 // AddIdentity registra autenticacion pero NO los servicios de autorizacion.
 builder.Services.AddAuthorization();
 
+// Cookie adaptada a SPA (401/403 bajo /api), cookie externa de 30 min, Google si esta
+// configurado y antiforgery con el nombre de cabecera que usa Angular. Fase 6 del PRP.
+builder.Services.AddSpaAuthentication(builder.Configuration);
+
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
 // Servicios de negocio portados del origen sin cambios.
 builder.Services.AddScoped<SearchHandler>();
 builder.Services.AddScoped<MapMarkersHandler>();
@@ -67,6 +74,28 @@ builder.Services.AddScoped<Rent.Api.Features.Admin.Services.IPopularSearchTracke
     Rent.Api.Features.Admin.Services.PopularSearchTracker>();
 
 builder.Services.Configure<MapsOptions>(builder.Configuration.GetSection(MapsOptions.SectionName));
+
+// Correo transaccional. Sin clave de Resend se usa el sustituto que solo escribe en el log,
+// para que un entorno sin credenciales siga permitiendo altas y restablecer contrasena.
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SectionName));
+
+var emailApiKey = builder.Configuration[$"{EmailOptions.SectionName}:ApiKey"];
+if (!string.IsNullOrWhiteSpace(emailApiKey))
+{
+    builder.Services.AddHttpClient<ResendEmailSender>(client =>
+    {
+        var emailBaseUrl = builder.Configuration[$"{EmailOptions.SectionName}:BaseUrl"];
+        client.BaseAddress = new Uri(string.IsNullOrWhiteSpace(emailBaseUrl)
+            ? "https://api.resend.com"
+            : emailBaseUrl.TrimEnd('/') + "/");
+        client.Timeout = TimeSpan.FromSeconds(10);
+    });
+    builder.Services.AddScoped<IEmailSender>(sp => sp.GetRequiredService<ResendEmailSender>());
+}
+else
+{
+    builder.Services.AddSingleton<IEmailSender, NoOpEmailSender>();
+}
 
 builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection("ImageStorage"));
 
@@ -94,11 +123,20 @@ app.UseAuthorization();
 
 app.MapHealthChecks("/health");
 
-// Superficie publica (Fase 3). Auth, portales y admin llegan en fases posteriores.
+// Superficie publica (Fase 3). Los portales y admin llegan en fases posteriores.
 app.MapHomeEndpoints();
 app.MapSearchEndpoints();
 app.MapListingsEndpoints();
 app.MapMapEndpoints();
+
+// Autenticacion (Fase 6).
+app.MapAuthEndpoints();
+
+if (!builder.Configuration.IsGoogleConfigured())
+{
+    app.Logger.LogWarning(
+        "Google authentication not configured (missing Authentication:Google:ClientId/ClientSecret). External login disabled.");
+}
 
 if (!app.Environment.IsEnvironment("Testing"))
 {
