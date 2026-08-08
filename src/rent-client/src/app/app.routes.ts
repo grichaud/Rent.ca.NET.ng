@@ -1,7 +1,4 @@
 import { Routes } from '@angular/router';
-import { HomePage } from './features/home/home-page';
-import { CityResultsPage } from './features/search/city-results-page';
-import { PagePlaceholder } from './shared/ui/page-placeholder';
 
 /**
  * Las rutas se declaran una vez por cultura (`/en/...`, `/fr/...`) en lugar de usar un
@@ -9,23 +6,64 @@ import { PagePlaceholder } from './shared/ui/page-placeholder';
  * entraria como si fuese un idioma — y obligaria a un guard que lo valide en cada
  * navegacion. Con dos ramas explicitas el router ya solo acepta los idiomas reales.
  *
- * Las pantallas marcadas con PagePlaceholder se construyen en fases posteriores del PRP;
- * las rutas existen desde ya para que los enlaces del header y del footer no rompan.
+ * Cada pantalla se carga con `loadComponent`: con todo en el bundle inicial se superaba el
+ * presupuesto de 500 kB, y quien entra a una ficha de alquiler no necesita descargar el
+ * panel de filtros ni la home.
+ *
+ * Las pantallas que aun apuntan a PagePlaceholder se construyen en fases posteriores del
+ * PRP; las rutas existen desde ya para que los enlaces del header y del footer no rompan.
  */
 function localeRoutes(): Routes {
   return [
-    { path: '', component: HomePage },
-    { path: 'about', component: PagePlaceholder, data: { title: 'About' } },
-    { path: 'faq', component: PagePlaceholder, data: { title: 'FAQ' } },
-    { path: 'privacy', component: PagePlaceholder, data: { title: 'Privacy' } },
-    { path: 'landlords', component: PagePlaceholder, data: { title: 'For Landlords' } },
-    { path: 'login', component: PagePlaceholder, data: { title: 'Sign In' } },
-    { path: 'signup', component: PagePlaceholder, data: { title: 'Sign Up' } },
-    { path: 'landlord', component: PagePlaceholder, data: { title: 'Landlord Dashboard' } },
+    {
+      path: '',
+      loadComponent: () => import('./features/home/home-page').then((m) => m.HomePage),
+    },
+    {
+      path: 'about',
+      loadComponent: () => import('./shared/ui/page-placeholder').then((m) => m.PagePlaceholder),
+      data: { title: 'About' },
+    },
+    {
+      path: 'faq',
+      loadComponent: () => import('./shared/ui/page-placeholder').then((m) => m.PagePlaceholder),
+      data: { title: 'FAQ' },
+    },
+    {
+      path: 'privacy',
+      loadComponent: () => import('./shared/ui/page-placeholder').then((m) => m.PagePlaceholder),
+      data: { title: 'Privacy' },
+    },
+    {
+      path: 'landlords',
+      loadComponent: () => import('./shared/ui/page-placeholder').then((m) => m.PagePlaceholder),
+      data: { title: 'For Landlords' },
+    },
+    {
+      path: 'login',
+      loadComponent: () => import('./shared/ui/page-placeholder').then((m) => m.PagePlaceholder),
+      data: { title: 'Sign In' },
+    },
+    {
+      path: 'signup',
+      loadComponent: () => import('./shared/ui/page-placeholder').then((m) => m.PagePlaceholder),
+      data: { title: 'Sign Up' },
+    },
+    {
+      path: 'landlord',
+      loadComponent: () => import('./shared/ui/page-placeholder').then((m) => m.PagePlaceholder),
+      data: { title: 'Landlord Dashboard' },
+    },
 
     // Deben ir al final: capturan cualquier segmento y taparian a las rutas de arriba.
-    { path: ':citySlug', component: CityResultsPage },
-    { path: ':citySlug/:propertySlug', component: PagePlaceholder, data: { title: 'Listing detail' } },
+    {
+      path: ':citySlug',
+      loadComponent: () => import('./features/search/city-results-page').then((m) => m.CityResultsPage),
+    },
+    {
+      path: ':citySlug/:propertySlug',
+      loadComponent: () => import('./features/listing/listing-detail-page').then((m) => m.ListingDetailPage),
+    },
   ];
 }
 
