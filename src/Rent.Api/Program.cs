@@ -1,41 +1,92 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Rent.Api.Domain;
+using Rent.Api.Infrastructure.Data;
+using Rent.Api.Infrastructure.Data.Seed;
+using Rent.Api.Infrastructure.Storage;
+
+// Fase 2 del PRP: dominio y base de datos. Los endpoints llegan en la Fase 3 y la
+// configuracion de auth para SPA (401 en /api/*, antiforgery) en la Fase 6.
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is not configured.");
+
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseSqlServer(connectionString, sqlOptions =>
+        {
+            sqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 5,
+                maxRetryDelay: TimeSpan.FromSeconds(30),
+                errorNumbersToAdd: null);
+        }));
+}
+
+// Mismas politicas de password que el origen: cambiarlas invalidaria los hashes
+// existentes si algun dia se importan usuarios.
+builder.Services
+    .AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
+    {
+        options.Password.RequiredLength = 8;
+        options.Password.RequireDigit = true;
+        options.Password.RequireUppercase = true;
+        options.Password.RequireNonAlphanumeric = false;
+        options.User.RequireUniqueEmail = true;
+        options.SignIn.RequireConfirmedAccount = false;
+    })
+    .AddEntityFrameworkStores<AppDbContext>()
+    .AddDefaultTokenProviders();
+
+// AddIdentity registra autenticacion pero NO los servicios de autorizacion.
+builder.Services.AddAuthorization();
+
+builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection("ImageStorage"));
+
+var storageProvider = builder.Configuration.GetValue<string>("ImageStorage:Provider") ?? "Local";
+if (string.Equals(storageProvider, "AzureBlob", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddScoped<IImageStorage, AzureBlobImageStorage>();
+}
+else
+{
+    builder.Services.AddScoped<IImageStorage, LocalImageStorage>();
+}
+
+builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+app.MapHealthChecks("/health");
 
-app.MapGet("/weatherforecast", () =>
+if (!app.Environment.IsEnvironment("Testing"))
 {
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+    try
+    {
+        await DatabaseSeeder.RunAsync(app.Services);
+    }
+    catch (Exception ex)
+    {
+        // Igual que el origen: una base que aun esta despertando de auto-pause no debe
+        // impedir que el proceso enlace el puerto. /health responde sin base de datos y
+        // los reintentos por request se recuperan cuando vuelve.
+        app.Logger.LogError(ex,
+            "Database initialization failed during startup. Starting the app anyway so it can serve requests and recover once the database resumes.");
+    }
+}
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+public partial class Program { }
