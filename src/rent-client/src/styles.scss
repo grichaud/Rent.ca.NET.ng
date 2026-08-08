@@ -14,6 +14,16 @@ html {
   scroll-behavior: smooth;
 }
 
+/* El esquema de color se deriva de la clase `dark`, no de un estilo inline: asi queda
+   resuelto tambien en el HTML que genera el SSR y los controles nativos (scrollbars,
+   inputs) no parpadean en claro sobre fondo oscuro. */
+html {
+  color-scheme: light dark;
+}
+html.dark {
+  color-scheme: dark;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: rgb(241 245 249); }

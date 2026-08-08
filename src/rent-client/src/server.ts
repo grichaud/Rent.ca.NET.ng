@@ -38,9 +38,17 @@ app.use(
 /**
  * Handle all other requests by rendering the Angular application.
  */
+/**
+ * El contexto de la peticion se pasa explicitamente al render.
+ *
+ * El token REQUEST llega al render, pero su cabecera `cookie` viene vacia, asi que el
+ * servidor no podria saber que tema pidio el usuario y serviria siempre el oscuro. Pasar
+ * la cookie por `requestContext` (que se lee con REQUEST_CONTEXT) no depende de que
+ * Angular decida propagar cabeceras.
+ */
 app.use((req, res, next) => {
   angularApp
-    .handle(req)
+    .handle(req, { cookie: req.headers.cookie ?? '' })
     .then((response) =>
       response ? writeResponseToNodeResponse(response, res) : next(),
     )
