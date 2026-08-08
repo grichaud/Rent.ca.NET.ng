@@ -12,7 +12,7 @@ import { map } from 'rxjs';
   selector: 'app-page-placeholder',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="glass-card p-8">
+    <div class="glass-card p-8 max-w-7xl mx-auto my-8 sm:my-12">
       <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">{{ title() }}</h1>
       <p class="mt-2 text-gray-600 dark:text-white/70">
         Esta pantalla se construye en una fase posterior del PRP de migracion.

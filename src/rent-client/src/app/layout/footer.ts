@@ -44,7 +44,7 @@ import { BrandLogo } from './brand-logo';
                   target="_blank"
                   rel="noopener"
                   [attr.class]="linkClass"
-                  >{{ 'footer.nextVersion' | transloco }}</a
+                  >Next.js version</a
                 >
               </li>
               <li>
@@ -53,7 +53,7 @@ import { BrandLogo } from './brand-logo';
                   target="_blank"
                   rel="noopener"
                   [attr.class]="linkClass"
-                  >{{ 'footer.sourceOnGitHub' | transloco }}</a
+                  >Source on GitHub</a
                 >
               </li>
             </ul>
