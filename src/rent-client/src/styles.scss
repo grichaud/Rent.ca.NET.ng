@@ -1,0 +1,177 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Rent.ca .NET (Angular) - Liquid Glass Design System
+ * Portado de ..\Rent.ca.NET\src\Rent.Web\wwwroot\css\input.css
+ * Cambio unico: la clase de Razor `.validation-summary-errors` se porta como
+ * `.form-error-summary`, que es la que usan los formularios de Angular.
+ */
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: rgb(241 245 249); }
+::-webkit-scrollbar-thumb { background: rgb(203 213 225); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgb(148 163 184); }
+
+.dark ::-webkit-scrollbar-track { background: rgb(30 41 59); }
+.dark ::-webkit-scrollbar-thumb { background: rgb(51 65 85); }
+.dark ::-webkit-scrollbar-thumb:hover { background: rgb(71 85 105); }
+
+/* Focus ring (brand blue) */
+*:focus-visible {
+  outline: 2px solid rgba(51, 141, 255, 0.5);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Selection color */
+::selection {
+  background: rgba(51, 141, 255, 0.3);
+  color: white;
+}
+
+@layer components {
+  /* Base glass panel */
+  .glass-base {
+    @apply bg-white/80 dark:bg-white/15 backdrop-blur-lg border border-gray-200 dark:border-white/25 rounded-2xl;
+  }
+
+  /* Card with stronger blur and shadow */
+  .glass-card {
+    @apply bg-white/80 dark:bg-white/15 backdrop-blur-xl border border-gray-200 dark:border-white/25 rounded-3xl shadow-xl;
+  }
+
+  /* Premium card with gradient */
+  .glass-card-premium {
+    @apply relative bg-gradient-to-br from-white dark:from-white/25 to-gray-100/80 dark:to-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/25 rounded-3xl shadow-2xl overflow-hidden;
+  }
+
+  /* Interactive button */
+  .glass-button {
+    @apply bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 backdrop-blur-md border border-gray-200 dark:border-white/25 rounded-xl px-5 py-2 text-gray-900 dark:text-white transition-all duration-300 hover:shadow-xl hover:scale-[1.02];
+  }
+
+  /* Primary CTA button with brand->cyan gradient + glow */
+  .glass-button-primary {
+    @apply relative bg-gradient-to-r from-brand-500 to-cyan-500 dark:from-brand-500/20 dark:to-cyan-500/20 hover:from-brand-600 hover:to-cyan-600 dark:hover:from-brand-500/30 dark:hover:to-cyan-500/30 backdrop-blur-xl border border-brand-400/50 dark:border-white/25 rounded-2xl px-5 py-2 text-white font-medium shadow-xl shadow-brand-500/20 hover:shadow-2xl hover:shadow-brand-500/30 transition-all duration-300;
+  }
+
+  /* Text input */
+  .glass-input {
+    @apply w-full bg-gray-50 hover:bg-gray-100 focus:bg-white dark:bg-white/10 dark:hover:bg-white/10 dark:focus:bg-white/15 backdrop-blur-md border border-gray-200 dark:border-white/15 focus:border-brand-500 dark:focus:border-white/30 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/40 outline-none transition-all duration-300;
+  }
+
+  /* Floating navbar */
+  .glass-navbar {
+    @apply bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border-b border-gray-200 dark:border-white/15;
+  }
+
+  /* Sidebar panel */
+  .glass-sidebar {
+    @apply bg-white/80 dark:bg-slate-900/40 backdrop-blur-2xl border border-gray-200 dark:border-white/15 rounded-3xl;
+  }
+
+  /* Modal/dialog */
+  .glass-modal {
+    @apply bg-white dark:bg-white/15 backdrop-blur-2xl border border-gray-200 dark:border-white/25 rounded-3xl shadow-2xl;
+  }
+
+  /* Badge / pill */
+  .glass-badge {
+    @apply inline-flex items-center gap-1 bg-gray-100 dark:bg-white/15 backdrop-blur-md border border-gray-200 dark:border-white/25 rounded-full px-3 py-1 text-sm text-gray-700 dark:text-white/80;
+  }
+
+  /* Top highlight line (use inside relative parent) */
+  .glass-highlight {
+    @apply absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-white/50 to-transparent;
+  }
+
+  /* Mesh background - 5 radial gradients (light + dark variants) */
+  .mesh-background {
+    @apply min-h-screen bg-gray-50 dark:bg-slate-900;
+    background-image:
+      radial-gradient(at 40% 20%, rgba(51, 141, 255, 0.08) 0px, transparent 50%),
+      radial-gradient(at 80% 0%,  rgba(168, 85, 247, 0.08) 0px, transparent 50%),
+      radial-gradient(at 0% 50%,  rgba(6, 182, 212, 0.08)  0px, transparent 50%),
+      radial-gradient(at 80% 50%, rgba(51, 141, 255, 0.06) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, rgba(20, 184, 166, 0.08) 0px, transparent 50%);
+  }
+
+  .dark .mesh-background {
+    background-image:
+      radial-gradient(at 40% 20%, rgba(51, 141, 255, 0.22) 0px, transparent 50%),
+      radial-gradient(at 80% 0%,  rgba(168, 85, 247, 0.22) 0px, transparent 50%),
+      radial-gradient(at 0% 50%,  rgba(6, 182, 212, 0.22)  0px, transparent 50%),
+      radial-gradient(at 80% 50%, rgba(51, 141, 255, 0.18) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, rgba(20, 184, 166, 0.22) 0px, transparent 50%);
+  }
+
+  /* Aurora orb - absolute-positioned blurred circle, used inside Hero */
+  .aurora-orb {
+    @apply absolute rounded-full blur-3xl opacity-40 dark:opacity-60 pointer-events-none animate-pulse-slow;
+  }
+}
+
+/* Resumen de errores de formulario. En el origen esto lo pintaba
+   asp-validation-summary; aqui lo aplica el componente de formulario. */
+.form-error-summary {
+  @apply p-3 rounded-lg border border-red-300 bg-red-50 dark:border-red-500/40 dark:bg-red-500/10;
+}
+.form-error-summary ul {
+  @apply list-none m-0 p-0 space-y-1;
+}
+
+/* FAQ accordion (Landlords page) - native <details>/<summary> with rotating chevron */
+.faq-item > summary::-webkit-details-marker { display: none; }
+.faq-item[open] > summary > .faq-chevron { transform: rotate(180deg); }
+
+/* Dual-range slider thumbs (used by the price filter) */
+.rentca-range {
+  height: 100%;
+}
+.rentca-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: rgb(51 141 255);
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  cursor: pointer;
+  margin-top: 0;
+}
+.dark .rentca-range::-webkit-slider-thumb {
+  background: white;
+  border-color: rgb(96 165 250);
+}
+.rentca-range::-moz-range-thumb {
+  pointer-events: auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: rgb(51 141 255);
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  cursor: pointer;
+}
+.dark .rentca-range::-moz-range-thumb {
+  background: white;
+  border-color: rgb(96 165 250);
+}
+.rentca-range::-webkit-slider-runnable-track {
+  background: transparent;
+  height: 100%;
+}
+.rentca-range::-moz-range-track {
+  background: transparent;
+  height: 100%;
+}
