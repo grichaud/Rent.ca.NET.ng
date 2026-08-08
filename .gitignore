@@ -1,0 +1,56 @@
+# .NET
+bin/
+obj/
+out/
+publish/
+*.user
+*.suo
+.vs/
+
+# Rider / VS Code
+.idea/
+.vscode/
+
+# NuGet
+*.nupkg
+packages/
+
+# EF Core / SQL Server
+*.mdf
+*.ldf
+
+# Node
+node_modules/
+
+# Angular
+.angular/
+dist/
+*.tsbuildinfo
+
+# Vitest / coverage
+coverage/
+
+# Playwright
+test-results/
+playwright-report/
+/.playwright-mcp/
+
+# User uploads (dev only; prod usa Azure Blob)
+src/Rent.Api/wwwroot/uploads/
+
+# OS / editor
+Thumbs.db
+.DS_Store
+*.swp
+
+# Secrets
+**/appsettings.Local.json
+.env
+.env.*
+!.env.example
+
+# Screenshots sueltos en la raiz — no ensuciar git status
+/*.png
+
+# Claude Code runtime lock (ephemeral, machine-local — never commit)
+.claude/scheduled_tasks.lock
