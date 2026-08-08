@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, roleGuard } from './core/auth/auth.guard';
+import { roleGuard } from './core/auth/auth.guard';
 
 /**
  * Las rutas se declaran una vez por cultura (`/en/...`, `/fr/...`) en lugar de usar un
@@ -78,9 +78,35 @@ function localeRoutes(): Routes {
     },
     {
       path: 'renter',
-      loadComponent: () => import('./shared/ui/page-placeholder').then((m) => m.PagePlaceholder),
-      data: { title: 'Renter Dashboard' },
-      canActivate: [authGuard],
+      loadComponent: () => import('./features/renter/renter-shell').then((m) => m.RenterShell),
+      canActivate: [roleGuard('Renter')],
+      children: [
+        {
+          path: '',
+          loadComponent: () =>
+            import('./features/renter/dashboard-page').then((m) => m.RenterDashboardPage),
+        },
+        {
+          path: 'favorites',
+          loadComponent: () =>
+            import('./features/renter/favorites-page').then((m) => m.RenterFavoritesPage),
+        },
+        {
+          path: 'alerts',
+          loadComponent: () =>
+            import('./features/renter/alerts-page').then((m) => m.RenterAlertsPage),
+        },
+        {
+          path: 'inquiries',
+          loadComponent: () =>
+            import('./features/renter/inquiries-page').then((m) => m.RenterInquiriesPage),
+        },
+        {
+          path: 'account',
+          loadComponent: () =>
+            import('./features/renter/account-page').then((m) => m.RenterAccountPage),
+        },
+      ],
     },
 
     // Deben ir al final: capturan cualquier segmento y taparian a las rutas de arriba.

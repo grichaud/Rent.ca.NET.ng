@@ -12,6 +12,7 @@ using Rent.Api.Features.Home;
 using Rent.Api.Features.Inquiries;
 using Rent.Api.Features.Listings;
 using Rent.Api.Features.Maps;
+using Rent.Api.Features.RenterPortal;
 using Rent.Api.Features.Search;
 using Rent.Api.Infrastructure.Data;
 using Rent.Api.Infrastructure.Data.Seed;
@@ -146,6 +147,9 @@ app.MapInquiryEndpoints();
 app.MapFavoriteEndpoints();
 app.MapAlertEndpoints();
 app.MapAlertDispatchEndpoint();
+
+// Portal del renter (Fase 8).
+app.MapRenterPortalEndpoints();
 
 if (!builder.Configuration.IsGoogleConfigured())
 {

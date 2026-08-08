@@ -58,7 +58,7 @@ import { PasswordField } from './ui/password-field';
 
           <div>
             <label for="password" class="block text-sm text-slate-700 dark:text-white/80 mb-1">{{
-              'auth.password' | transloco
+              'renter.accountNewPassword' | transloco
             }}</label>
             <app-password-field [control]="form.controls.password" controlId="password" />
             @for (message of errors()['password'] ?? []; track message) {
