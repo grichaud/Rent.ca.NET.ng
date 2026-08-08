@@ -1,6 +1,11 @@
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Rent.Api.Domain;
+using Rent.Api.Features.Home;
+using Rent.Api.Features.Listings;
+using Rent.Api.Features.Maps;
+using Rent.Api.Features.Search;
 using Rent.Api.Infrastructure.Data;
 using Rent.Api.Infrastructure.Data.Seed;
 using Rent.Api.Infrastructure.Storage;
@@ -11,6 +16,14 @@ using Rent.Api.Infrastructure.Storage;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+
+// Los enums viajan como string ("Apartment", no 0). En la base ya se guardan como string
+// (HasConversion<string>), asi que un numero en el JSON seria una tercera representacion
+// del mismo dato y obligaria al cliente a mantener un mapa de indices.
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
 
 if (!builder.Environment.IsEnvironment("Testing"))
 {
@@ -45,6 +58,16 @@ builder.Services
 // AddIdentity registra autenticacion pero NO los servicios de autorizacion.
 builder.Services.AddAuthorization();
 
+// Servicios de negocio portados del origen sin cambios.
+builder.Services.AddScoped<SearchHandler>();
+builder.Services.AddScoped<MapMarkersHandler>();
+builder.Services.AddScoped<Rent.Api.Features.Favorites.IFavoriteService,
+    Rent.Api.Features.Favorites.FavoriteService>();
+builder.Services.AddScoped<Rent.Api.Features.Admin.Services.IPopularSearchTracker,
+    Rent.Api.Features.Admin.Services.PopularSearchTracker>();
+
+builder.Services.Configure<MapsOptions>(builder.Configuration.GetSection(MapsOptions.SectionName));
+
 builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection("ImageStorage"));
 
 var storageProvider = builder.Configuration.GetValue<string>("ImageStorage:Provider") ?? "Local";
@@ -70,6 +93,12 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapHealthChecks("/health");
+
+// Superficie publica (Fase 3). Auth, portales y admin llegan en fases posteriores.
+app.MapHomeEndpoints();
+app.MapSearchEndpoints();
+app.MapListingsEndpoints();
+app.MapMapEndpoints();
 
 if (!app.Environment.IsEnvironment("Testing"))
 {
