@@ -21,18 +21,15 @@ function localeRoutes(): Routes {
     },
     {
       path: 'about',
-      loadComponent: () => import('./shared/ui/page-placeholder').then((m) => m.PagePlaceholder),
-      data: { title: 'About' },
+      loadComponent: () => import('./features/content/about-page').then((m) => m.AboutPage),
     },
     {
       path: 'faq',
-      loadComponent: () => import('./shared/ui/page-placeholder').then((m) => m.PagePlaceholder),
-      data: { title: 'FAQ' },
+      loadComponent: () => import('./features/content/faq-page').then((m) => m.FaqPage),
     },
     {
       path: 'privacy',
-      loadComponent: () => import('./shared/ui/page-placeholder').then((m) => m.PagePlaceholder),
-      data: { title: 'Privacy' },
+      loadComponent: () => import('./features/content/privacy-page').then((m) => m.PrivacyPage),
     },
     {
       path: 'landlords',
