@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { HomePage } from './features/home/home-page';
+import { CityResultsPage } from './features/search/city-results-page';
 import { PagePlaceholder } from './shared/ui/page-placeholder';
 
 /**
@@ -23,7 +24,7 @@ function localeRoutes(): Routes {
     { path: 'landlord', component: PagePlaceholder, data: { title: 'Landlord Dashboard' } },
 
     // Deben ir al final: capturan cualquier segmento y taparian a las rutas de arriba.
-    { path: ':citySlug', component: PagePlaceholder, data: { title: 'City results' } },
+    { path: ':citySlug', component: CityResultsPage },
     { path: ':citySlug/:propertySlug', component: PagePlaceholder, data: { title: 'Listing detail' } },
   ];
 }
