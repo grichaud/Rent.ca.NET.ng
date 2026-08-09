@@ -3,6 +3,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Rent.Api.Domain;
+using Rent.Api.Features.Admin;
 using Rent.Api.Features.Alerts;
 using Rent.Api.Features.Alerts.Engine;
 using Rent.Api.Features.Auth;
@@ -165,6 +166,10 @@ app.MapRenterPortalEndpoints();
 // Portal del landlord (Fase 9).
 app.MapLandlordPortalEndpoints();
 app.MapLandlordListingEndpoints();
+
+// Panel de administracion (Fase 10).
+app.MapAdminEndpoints();
+app.MapAdminContentEndpoints();
 
 if (!builder.Configuration.IsGoogleConfigured())
 {

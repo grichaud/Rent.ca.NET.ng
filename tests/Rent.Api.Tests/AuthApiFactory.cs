@@ -120,6 +120,128 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
         return propertyId;
     }
 
+    /// <summary>
+    /// Crea un usuario con el rol Admin y devuelve su correo.
+    ///
+    /// No se puede reutilizar <c>SignUpAsync</c>: el alta solo acepta Renter y Landlord —un
+    /// administrador no se auto-nombra— y ascender a alguien que ya tiene sesion no refresca
+    /// las claims de su cookie, asi que el rol nuevo no llegaria a la peticion siguiente. Por
+    /// eso el usuario nace con el rol y despues inicia sesion.
+    /// </summary>
+    public async Task<string> CreateAdminAsync(string password = "Password123")
+    {
+        using var scope = Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+        var email = $"admin-{Guid.NewGuid():N}@example.com";
+        var user = new ApplicationUser
+        {
+            Id = Guid.NewGuid(),
+            Email = email,
+            UserName = email,
+            FullName = "Test Admin"
+        };
+
+        var created = await userManager.CreateAsync(user, password);
+        if (!created.Succeeded)
+            throw new InvalidOperationException(string.Join(", ", created.Errors.Select(e => e.Description)));
+
+        await userManager.AddToRoleAsync(user, Roles.Admin);
+        return email;
+    }
+
+    /// <summary>Siembra una promocion sobre una propiedad y devuelve su id.</summary>
+    public async Task<Guid> SeedSpecialAsync(Guid propertyId, string title = "First month free!", bool isActive = true)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var special = new RentSpecial
+        {
+            Id = Guid.NewGuid(),
+            PropertyId = propertyId,
+            Title = title,
+            IsActive = isActive,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        db.RentSpecials.Add(special);
+        await db.SaveChangesAsync();
+        return special.Id;
+    }
+
+    /// <summary>Siembra una entrada de busquedas populares y devuelve su id.</summary>
+    public async Task<Guid> SeedSearchAsync(string normalizedQuery, string citySlug, int searchCount = 1)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var entry = new PopularSearch
+        {
+            Id = Guid.NewGuid(),
+            NormalizedQuery = normalizedQuery,
+            CitySlug = citySlug,
+            SearchCount = searchCount,
+            LastSearchedAt = DateTimeOffset.UtcNow
+        };
+
+        db.PopularSearches.Add(entry);
+        await db.SaveChangesAsync();
+        return entry.Id;
+    }
+
+    /// <summary>Siembra una conversacion de IA con sus mensajes y devuelve su id.</summary>
+    public async Task<Guid> SeedAiConversationAsync(string? title = "Looking for a loft", string? toolName = "search_listings")
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var conversationId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+
+        db.AiConversations.Add(new AiConversation
+        {
+            Id = conversationId,
+            SessionId = Guid.NewGuid(),
+            Title = title,
+            CreatedAt = now.AddMinutes(-5),
+            UpdatedAt = now,
+            Messages =
+            {
+                new AiMessage
+                {
+                    Id = Guid.NewGuid(),
+                    ConversationId = conversationId,
+                    Role = AiMessageRole.User,
+                    Content = "Two bedrooms downtown",
+                    CreatedAt = now.AddMinutes(-5)
+                },
+                new AiMessage
+                {
+                    Id = Guid.NewGuid(),
+                    ConversationId = conversationId,
+                    Role = AiMessageRole.Tool,
+                    Content = "{}",
+                    ToolName = toolName,
+                    ToolArgsJson = "{\"city\":\"toronto\"}",
+                    ToolResultJson = "{\"count\":1}",
+                    CreatedAt = now.AddMinutes(-4)
+                },
+                new AiMessage
+                {
+                    Id = Guid.NewGuid(),
+                    ConversationId = conversationId,
+                    Role = AiMessageRole.Assistant,
+                    Content = "Here is what I found.",
+                    CreatedAt = now.AddMinutes(-3)
+                }
+            }
+        });
+
+        await db.SaveChangesAsync();
+        return conversationId;
+    }
+
     /// <summary>Escribe la bio del perfil de un landlord (p.ej. para simular el centinela del seeder).</summary>
     public async Task TagLandlordDescriptionAsync(string email, string description)
     {

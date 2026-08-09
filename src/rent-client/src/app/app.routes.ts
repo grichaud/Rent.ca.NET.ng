@@ -71,6 +71,53 @@ function localeRoutes(): Routes {
       ],
     },
     {
+      path: 'admin',
+      loadComponent: () => import('./features/admin/admin-shell').then((m) => m.AdminShell),
+      // El guard es UX: quien manda es [RequireRole(Admin)] en la API. Un usuario sin rol que
+      // se salte el guard veria las pantallas vacias, porque cada llamada le daria 403.
+      canActivate: [roleGuard('Admin')],
+      children: [
+        {
+          path: '',
+          loadComponent: () =>
+            import('./features/admin/dashboard-page').then((m) => m.AdminDashboardPage),
+        },
+        {
+          path: 'properties',
+          loadComponent: () =>
+            import('./features/admin/properties-page').then((m) => m.AdminPropertiesPage),
+        },
+        {
+          path: 'landlords',
+          loadComponent: () =>
+            import('./features/admin/landlords-page').then((m) => m.AdminLandlordsPage),
+        },
+        {
+          path: 'specials',
+          loadComponent: () =>
+            import('./features/admin/specials-page').then((m) => m.AdminSpecialsPage),
+        },
+        {
+          path: 'searches',
+          loadComponent: () =>
+            import('./features/admin/searches-page').then((m) => m.AdminSearchesPage),
+        },
+        {
+          path: 'ai',
+          loadComponent: () => import('./features/admin/ai-page').then((m) => m.AdminAiPage),
+        },
+        {
+          path: 'ai/:id',
+          loadComponent: () =>
+            import('./features/admin/ai-conversation-page').then((m) => m.AdminAiConversationPage),
+        },
+        {
+          path: 'users',
+          loadComponent: () => import('./features/admin/users-page').then((m) => m.AdminUsersPage),
+        },
+      ],
+    },
+    {
       path: 'landlord',
       loadComponent: () => import('./features/landlord/landlord-shell').then((m) => m.LandlordShell),
       canActivate: [roleGuard('Landlord')],

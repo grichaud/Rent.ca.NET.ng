@@ -1,6 +1,6 @@
 // Genera translations.ts para Angular a partir de los .resx del origen ya volcados a JSON.
-// Solo se incluyen los grupos que usan las pantallas ya portadas: meter las claves de
-// admin inflaria el bundle inicial sin que nadie las use todavia.
+// Solo se incluyen los grupos que usan las pantallas ya portadas; el resto de claves del
+// origen (las que ninguna pantalla pide) se quedan fuera para no inflar el bundle.
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const pad = process.argv[2];
@@ -9,7 +9,7 @@ const out = process.argv[3];
 const DOTTED = new Set([
   'common', 'navbar', 'footer', 'listings', 'filters', 'detail',
   'hero', 'results', 'sort', 'cities', 'stats', 'gallery', 'map', 'validation',
-  'landlordPage', 'aiChat', 'auth', 'renter', 'landlord',
+  'landlordPage', 'aiChat', 'auth', 'renter', 'landlord', 'admin',
 ]);
 const FLAT = /^(About|Faq|Landlords)_/;
 
@@ -48,8 +48,9 @@ const header = `/**
  * al servidor de render a pedirse los JSON a si mismo, y una peticion lenta o fallida
  * dejaria el HTML servido con las claves sin traducir — justo lo que el SSR evita.
  *
- * Falta a proposito el grupo admin: se anade cuando se porten esas pantallas, para no
- * cargar el bundle inicial con texto que nadie usa.
+ * Todas las pantallas portadas hasta la Fase 10 tienen aqui su grupo. Las claves del origen
+ * que ninguna pantalla usa se quedan fuera a proposito, para no cargar el bundle inicial
+ * con texto muerto.
  */
 `;
 

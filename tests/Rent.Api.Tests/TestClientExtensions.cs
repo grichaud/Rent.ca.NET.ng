@@ -51,6 +51,24 @@ internal static class TestClientExtensions
         return email;
     }
 
+    /// <summary>Inicia sesion con un usuario ya existente y deja el cliente armado.</summary>
+    public static async Task LoginAsync(this HttpClient client, string email, string password = "Password123")
+    {
+        await client.ArmAntiforgeryAsync();
+
+        var response = await client.PostAsJsonAsync("/api/auth/login", new
+        {
+            email,
+            password,
+            rememberMe = false
+        });
+
+        response.EnsureSuccessStatusCode();
+
+        // El token emitido antes del login iba ligado al anonimo.
+        await client.ArmAntiforgeryAsync();
+    }
+
     public static string? ReadSetCookie(HttpResponseMessage response, string name)
     {
         if (!response.Headers.TryGetValues("Set-Cookie", out var cookies)) return null;
