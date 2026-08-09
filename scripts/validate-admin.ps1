@@ -216,8 +216,12 @@ Check 'SSR busquedas populares' (($html -match 'Popular Searches') -and ($html -
 $html = (curl.exe -s -b $jar "$ssr_url/en/admin/ai") -join "`n"
 Check 'SSR uso de la IA' (($html -match 'AI Usage') -and ($html -match 'Estimated tokens')) '/en/admin/ai'
 
-$html = (curl.exe -s -b $jar "$ssr_url/en/admin/users") -join "`n"
-Check 'SSR usuarios con el admin' (($html -match 'Users') -and ($html -match 'admin@rent.local')) '/en/admin/users'
+# Se BUSCA al admin en vez de esperarlo en la lista cruda: esa pantalla es un top-50 sin
+# paginar (decision de la Fase 10, igual que el origen) y la suite E2E de la Fase 13 crea una
+# cuenta nueva por prueba, asi que en una base de desarrollo con uso real el admin sembrado
+# acaba cayendose de los primeros 50. Filtrar por correo es ademas lo que haria una persona.
+$html = (curl.exe -s -b $jar "$ssr_url/en/admin/users?email=admin@rent.local") -join "`n"
+Check 'SSR usuarios con el admin' (($html -match 'Users') -and ($html -match 'admin@rent.local')) '/en/admin/users?email='
 
 # 16) Sin cookie, el panel rebota al login con un 302 real (no lo renderiza inline).
 $anon = curl.exe -s -o NUL -w '%{http_code} %{redirect_url}' "$ssr_url/en/admin"

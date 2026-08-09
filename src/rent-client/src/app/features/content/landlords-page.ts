@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { DOCUMENT, ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { CultureService } from '../../core/i18n/culture.service';
@@ -149,7 +149,22 @@ const HERO_STATS = [
               <span>{{ 'Landlords_GetStartedFree' | transloco }}</span>
               <app-icon name="arrow-right" class="h-4 w-4" />
             </a>
-            <a [routerLink]="selfLink()" fragment="pricing" class="glass-button">{{
+            <!--
+              El href lleva la RUTA COMPLETA, no solo el fragmento.
+
+              Un href="#pricing" pelado no vale aqui: con un elemento base en el head -y esta
+              app tiene base href="/"- el navegador resuelve los enlaces de solo fragmento
+              contra la BASE, no contra la pagina actual. El enlace acababa en /#pricing, que
+              redirige a /en, y el boton de precios sacaba al visitante de la pagina.
+
+              routerLink con fragment tampoco desplaza: cuando solo cambia el fragmento de la
+              ruta ya activa, el desplazamiento por ancla de Angular no llega a dispararse. De
+              ahi el manejador explicito. Sin JavaScript el href sigue funcionando solo.
+
+              (Cuidado al comentar dentro de esta plantilla: la delimitan comillas invertidas,
+              asi que una sola dentro del comentario rompe la compilacion.)
+            -->
+            <a [href]="pricingHref()" (click)="scrollToPricing($event)" class="glass-button">{{
               'Landlords_ViewPricing' | transloco
             }}</a>
           </div>
@@ -415,6 +430,7 @@ const HERO_STATS = [
 export class LandlordsPage {
   private readonly culture = inject(CultureService);
   private readonly transloco = inject(TranslocoService);
+  private readonly document = inject(DOCUMENT);
 
   protected readonly tiers = TIERS;
   protected readonly whyCards = WHY_CARDS;
@@ -425,7 +441,13 @@ export class LandlordsPage {
   protected readonly stars = [0, 1, 2, 3, 4];
 
   protected readonly signupLink = computed(() => ['/', this.culture.culture(), 'signup']);
-  protected readonly selfLink = computed(() => ['/', this.culture.culture(), 'landlords']);
+  protected readonly pricingHref = computed(() => `/${this.culture.culture()}/landlords#pricing`);
+
+  /** Desplaza sin recargar. `scroll-mt-24` deja la seccion por debajo del header fijo. */
+  protected scrollToPricing(event: Event): void {
+    event.preventDefault();
+    this.document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
   constructor() {
     // El titulo reusa `common.landlords`, la misma clave del `ViewData["Title"]` del origen.

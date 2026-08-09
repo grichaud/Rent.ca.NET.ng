@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Rent.Api.Tests;
 
@@ -9,7 +10,17 @@ namespace Rent.Api.Tests;
 /// </summary>
 internal static class TestClientExtensions
 {
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+    /// <summary>
+    /// Las mismas opciones que usa la API, incluido el convertidor de enums a cadena.
+    ///
+    /// Sin el, cualquier DTO con un enum revienta al deserializarlo ("The JSON value could not
+    /// be converted"), y el error apunta al test en vez de a la diferencia de configuracion.
+    /// El cliente de pruebas tiene que hablar el mismo dialecto que el servidor.
+    /// </summary>
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter() },
+    };
 
     /// <summary>
     /// Reproduce lo que hace Angular: pedir el token, leerlo de la cookie <c>XSRF-TOKEN</c> y

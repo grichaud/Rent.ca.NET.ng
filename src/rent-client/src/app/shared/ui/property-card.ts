@@ -101,6 +101,14 @@ import { Icon } from './icon/icon';
       <article
         class="glass-card flex flex-col overflow-hidden p-0 hover:scale-[1.02] transition-all duration-300 hover:shadow-2xl hover:shadow-brand-500/10"
       >
+        <!--
+          El envoltorio existe para que el corazon NO cuelgue del enlace de la tarjeta.
+          Estando dentro era un <a> dentro de otro <a> —HTML invalido— y, para un visitante
+          anonimo, pulsarlo abria la ficha en vez de llevarlo al login: el enlace de fuera se
+          comia el clic. Con sesion no se notaba, porque ahi el corazon es un <button> que
+          detiene la propagacion a mano.
+        -->
+        <div class="relative">
         <a [routerLink]="detailLink()" class="relative aspect-[4/3] overflow-hidden block group">
           @if (item().primaryImageUrl) {
             <img
@@ -135,6 +143,8 @@ import { Icon } from './icon/icon';
             }
           </div>
 
+        </a>
+
           <div class="absolute top-3 right-3 flex flex-col gap-1.5 items-end">
             <app-favorite-button [propertyId]="item().id" [initialFavorited]="item().isFavorited" />
             @if (item().isVerified) {
@@ -146,7 +156,7 @@ import { Icon } from './icon/icon';
               </span>
             }
           </div>
-        </a>
+        </div>
 
         <div class="flex flex-col gap-2.5 p-4">
           <div>
