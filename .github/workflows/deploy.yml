@@ -15,6 +15,18 @@ concurrency:
   group: deploy-production
   cancel-in-progress: false
 
+# La autenticacion es OIDC, no un perfil de publicacion.
+#
+# Los perfiles de publicacion NO sirven aqui: Azure crea las App Service nuevas con la
+# autenticacion basica de SCM desactivada, y el despliegue falla con "Publish profile is
+# invalid for app-name and slot-name provided". Se podria reactivar con una linea, pero es
+# volver a poner credenciales de larga vida donde Azure decidio quitarlas. Con OIDC, GitHub se
+# identifica con un token efimero de la propia ejecucion y en el repositorio no vive ningun
+# secreto: solo identificadores.
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   api:
     name: API (.NET)
@@ -29,11 +41,16 @@ jobs:
       - name: Publicar
         run: dotnet publish src/Rent.Api/Rent.Api.csproj -c Release -o publish
 
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       - name: Desplegar
         uses: azure/webapps-deploy@v3
         with:
           app-name: rent-ca-net-ng-api
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_API }}
           package: publish
 
       - name: Comprobar que responde
@@ -72,11 +89,16 @@ jobs:
       #
       # El bundle del servidor es autocontenido (solo importa modulos nativos de Node), asi que
       # no hace falta subir node_modules ni dejar que Oryx compile en el App Service.
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       - name: Desplegar
         uses: azure/webapps-deploy@v3
         with:
           app-name: rent-ca-net-ng
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_SSR }}
           package: src/rent-client/dist/rent-client
 
       - name: Comprobar que responde
