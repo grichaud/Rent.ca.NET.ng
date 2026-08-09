@@ -44,7 +44,7 @@ public static class DatabaseSeeder
 
         var environment = scope.ServiceProvider.GetRequiredService<IHostEnvironment>();
         var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
-        await AdminUserSeeder.SeedAsync(userManager, environment, configuration, ct);
+        await AdminUserSeeder.SeedAsync(userManager, environment, configuration, logger, ct);
     }
 
     /// <summary>

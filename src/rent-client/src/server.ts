@@ -5,24 +5,76 @@ import {
   writeResponseToNodeResponse,
 } from '@angular/ssr/node';
 import express from 'express';
+import { createProxyMiddleware } from 'http-proxy-middleware';
 import { join } from 'node:path';
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
-const app = express();
-const angularApp = new AngularNodeAppEngine();
+/**
+ * Host de la API. El mismo valor que usa el render del servidor para pedirse los datos, y el
+ * destino al que este proceso reenvia las llamadas del NAVEGADOR.
+ */
+const apiBaseUrl = process.env['API_BASE_URL'] ?? 'http://localhost:5282';
 
 /**
- * Example Express Rest API endpoints can be defined here.
- * Uncomment and define endpoints as necessary.
+ * Hostnames que el motor de Angular acepta (proteccion contra SSRF: rechaza peticiones cuya
+ * cabecera Host no reconoce). Sin el dominio real, produccion responde 400 a todo.
  *
- * Example:
- * ```ts
- * app.get('/api/{*splat}', (req, res) => {
- *   // Handle API request
- * });
- * ```
+ * Va en runtime y no en `angular.json` a proposito: el dominio de despliegue no se sabe en
+ * tiempo de build, y fijarlo alli obligaria a recompilar para cambiar de host.
  */
+const allowedHosts = [
+  'localhost',
+  '127.0.0.1',
+  ...(process.env['ALLOWED_HOSTS'] ?? '')
+    .split(',')
+    .map((host) => host.trim())
+    .filter(Boolean),
+];
+
+const app = express();
+const angularApp = new AngularNodeAppEngine({ allowedHosts });
+
+/**
+ * Reenvio de la API al navegador.
+ *
+ * Este servidor es la unica puerta publica: el navegador solo conoce SU host, asi que las
+ * llamadas de cliente salen como `/api/...` contra el y hay que reenviarlas. Sin esto, cada
+ * una cae en el renderer de Angular y vuelve como HTML — login, favoritos, consultas, chat y
+ * las fotos, todo muerto en produccion aunque la API este perfectamente viva.
+ *
+ * Detalles que importan:
+ *
+ * - **Las cookies no se reescriben.** La API emite `Set-Cookie` SIN atributo Domain, asi que
+ *   la cookie queda ligada al host que ve el navegador (este). Tocar el dominio aqui la
+ *   dejaria fuera de alcance y la sesion no sobreviviria a la primera navegacion.
+ * - **Sin buffering.** El chat responde por Server-Sent Events; acumular la respuesta la
+ *   entregaria de golpe al final y se perderia el efecto de escritura progresiva.
+ * - **`changeOrigin`**: App Service enruta por la cabecera Host, asi que hay que mandar la
+ *   del destino y no la nuestra.
+ */
+const apiProxy = createProxyMiddleware({
+  target: apiBaseUrl,
+  changeOrigin: true,
+  xfwd: true,
+  // Se filtra por ruta en vez de montar en `app.use('/api', ...)`: Express RECORTA el prefijo
+  // del punto de montaje, asi que la API recibiria `/home` en lugar de `/api/home` y
+  // contestaria 404 a todo. Con `pathFilter` la URL llega intacta.
+  pathFilter: ['/api/**', '/uploads/**'],
+  // El cuerpo se transmite tal cual llega, sin esperar a tenerlo entero.
+  selfHandleResponse: false,
+  on: {
+    proxyRes: (proxyRes) => {
+      // Cinturon y tirantes con los proxys intermedios de Azure, que si no acumulan el SSE.
+      if (proxyRes.headers['content-type']?.includes('text/event-stream')) {
+        proxyRes.headers['x-accel-buffering'] = 'no';
+      }
+    },
+  },
+});
+
+// Las fotos de los listings las sirve la API desde su wwwroot/uploads; van por el mismo filtro.
+app.use(apiProxy);
 
 /**
  * Serve static files from /browser
@@ -67,6 +119,7 @@ if (isMainModule(import.meta.url) || process.env['pm_id']) {
     }
 
     console.log(`Node Express server listening on http://localhost:${port}`);
+    console.log(`Proxying /api and /uploads to ${apiBaseUrl}`);
   });
 }
 
