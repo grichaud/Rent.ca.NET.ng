@@ -1,10 +1,13 @@
-import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { catchError, of } from 'rxjs';
 import { ApiService } from '../../core/api/api.service';
 import { CultureService } from '../../core/i18n/culture.service';
+import { siteJsonLd } from '../../core/seo/json-ld';
+import { SeoService } from '../../core/seo/seo.service';
+import { SITE_BASE_URL } from '../../core/seo/site-url';
 import { CountUpDirective } from '../../shared/count-up.directive';
 import { formatTemplate } from '../../shared/format';
 import { Icon } from '../../shared/ui/icon/icon';
@@ -293,6 +296,28 @@ export class HomePage {
   private readonly router = inject(Router);
   private readonly transloco = inject(TranslocoService);
   protected readonly culture = inject(CultureService);
+
+  private readonly seo = inject(SeoService);
+  private readonly siteUrl = inject(SITE_BASE_URL);
+
+  constructor() {
+    // No usa `applyStaticSeo` porque el titulo del origen se compone de DOS claves
+    // (`hero.title` + `hero.titleHighlight` = "Find Your Next Home"), y ese helper solo sabe
+    // de una.
+    //
+    // La identidad del sitio (WebSite + Organization) se declara SOLO aqui: repetirla en cada
+    // pagina no anade informacion, solo peso al HTML de todas ellas.
+    effect(() => {
+      const culture = this.culture.culture();
+      const t = (key: string) => this.transloco.translate(key);
+
+      this.seo.apply({
+        title: `${t('hero.title')} ${t('hero.titleHighlight')}`,
+        description: t('seo.description.home'),
+        jsonLd: siteJsonLd(this.siteUrl, culture, t('seo.siteName')),
+      });
+    });
+  }
 
   private readonly cityInput = viewChild<ElementRef<HTMLInputElement>>('cityInput');
   private readonly track = viewChild<ElementRef<HTMLElement>>('track');

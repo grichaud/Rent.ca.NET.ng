@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { applyStaticSeo } from '../../core/seo/static-seo';
 
 /** Port de Features/Home/Privacy.cshtml. */
 @Component({
@@ -30,4 +31,8 @@ import { TranslocoPipe } from '@jsverse/transloco';
     </div>
   `,
 })
-export class PrivacyPage {}
+export class PrivacyPage {
+  constructor() {
+    applyStaticSeo('footer.privacyTitle', 'seo.description.privacy');
+  }
+}

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -6,6 +6,9 @@ import { catchError, combineLatest, map, of, switchMap } from 'rxjs';
 import { ApiService, SearchFilters as ApiFilters } from '../../core/api/api.service';
 import { PropertyType, SearchResponse, SearchSort } from '../../core/api/api.types';
 import { CultureService } from '../../core/i18n/culture.service';
+import { breadcrumbJsonLd, cityJsonLd } from '../../core/seo/json-ld';
+import { SeoService } from '../../core/seo/seo.service';
+import { SITE_BASE_URL } from '../../core/seo/site-url';
 import { formatTemplate } from '../../shared/format';
 import { Icon } from '../../shared/ui/icon/icon';
 import { PropertyCardComponent } from '../../shared/ui/property-card';
@@ -143,7 +146,51 @@ export class CityResultsPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly transloco = inject(TranslocoService);
+  private readonly seo = inject(SeoService);
+  private readonly siteUrl = inject(SITE_BASE_URL);
   protected readonly culture = inject(CultureService);
+
+  constructor() {
+    effect(() => this.applySeo());
+  }
+
+  /**
+   * `<head>` de la pagina de ciudad.
+   *
+   * El canonical que pone el servicio ya viene SIN query, asi que las combinaciones de filtros
+   * apuntan todas a la ciudad limpia. Es deliberado: `?maxPrice=4000&types=Condo` y sus
+   * infinitas variantes ensenan el mismo catalogo y competirian entre si por la misma
+   * busqueda.
+   */
+  private applySeo(): void {
+    const res = this.result();
+    if (!res) return;
+
+    const t = (key: string) => this.transloco.translate(key);
+
+    if (!res.city) {
+      // Mismo literal que pinta la plantilla, y sin indexar: una ciudad inexistente no debe
+      // dejar rastro en el buscador.
+      this.seo.apply({ title: 'City not found', noIndex: true });
+      return;
+    }
+
+    const culture = this.culture.culture();
+    const city = res.city;
+
+    this.seo.apply({
+      title: `${t('listings.rentalsIn')} ${city.name}`,
+      description: formatTemplate(t('seo.description.city'), city.name, city.province),
+      image: city.imageUrl,
+      jsonLd: [
+        cityJsonLd(this.siteUrl, culture, city, res.properties),
+        breadcrumbJsonLd([
+          { name: t('common.rent'), url: `${this.siteUrl}/${culture}` },
+          { name: city.name, url: `${this.siteUrl}/${culture}/${city.slug}` },
+        ]),
+      ],
+    });
+  }
 
   protected readonly sortOptions: { value: SearchSort; key: string }[] = [
     { value: 'Newest', key: 'sort.newest' },

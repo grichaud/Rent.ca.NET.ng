@@ -1,6 +1,9 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { applyStaticSeo } from '../../core/seo/static-seo';
 import { Icon } from '../../shared/ui/icon/icon';
+
+const FAQ_ITEMS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 /**
  * Port de Features/Home/Faq.cshtml. Se conserva `<details>/<summary>` nativo en vez de un
@@ -42,5 +45,25 @@ import { Icon } from '../../shared/ui/icon/icon';
   `,
 })
 export class FaqPage {
-  protected readonly items = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  protected readonly items = FAQ_ITEMS;
+
+  private readonly transloco = inject(TranslocoService);
+
+  constructor() {
+    // `FAQPage` es de los pocos datos estructurados que el buscador convierte en un resultado
+    // desplegable. Se emite con las MISMAS claves que pinta la plantilla: si el JSON-LD
+    // dijera algo distinto de lo que se ve en pantalla seria motivo de penalizacion, no de
+    // premio.
+    applyStaticSeo('Faq_Title', 'seo.description.faq', () => [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: FAQ_ITEMS.map((n) => ({
+          '@type': 'Question',
+          name: this.transloco.translate(`Faq_Q${n}`),
+          acceptedAnswer: { '@type': 'Answer', text: this.transloco.translate(`Faq_A${n}`) },
+        })),
+      },
+    ]);
+  }
 }

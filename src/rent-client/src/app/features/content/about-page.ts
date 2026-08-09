@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { applyStaticSeo } from '../../core/seo/static-seo';
 import { Icon } from '../../shared/ui/icon/icon';
 
 /** Port de Features/Home/About.cshtml. Todo el texto vive en los .resx del origen. */
@@ -59,6 +60,11 @@ import { Icon } from '../../shared/ui/icon/icon';
   `,
 })
 export class AboutPage {
+  constructor() {
+    // El titulo reusa la misma clave que `ViewData["Title"]` en el origen (`common.about`).
+    applyStaticSeo('common.about', 'seo.description.about');
+  }
+
   protected readonly cards = [
     {
       icon: 'building-2', bg: 'bg-brand-500/15 dark:bg-brand-500/25', color: 'text-brand-600 dark:text-brand-300',

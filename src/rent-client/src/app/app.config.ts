@@ -17,6 +17,7 @@ import { ssrCookieInterceptor } from './core/auth/ssr-cookie.interceptor';
 import { CultureService } from './core/i18n/culture.service';
 import { StaticTranslocoLoader } from './core/i18n/transloco-loader';
 import { SUPPORTED_CULTURES, DEFAULT_CULTURE } from './core/i18n/translations';
+import { SeoService } from './core/seo/seo.service';
 import { ThemeService } from './core/theme/theme.service';
 
 export const appConfig: ApplicationConfig = {
@@ -56,9 +57,12 @@ export const appConfig: ApplicationConfig = {
     // La sesion se resuelve por el mismo motivo y se DEVUELVE para que el arranque la espere:
     // si el HTML del SSR se pintara antes de saber quien es el visitante, saldria siempre
     // anonimo y el header cambiaria de golpe al hidratar.
+    // El SEO se inicializa DESPUES de la cultura: compone `<head>` con textos traducidos y
+    // con la URL por idioma, asi que necesita que el idioma activo ya este resuelto.
     provideAppInitializer(() => {
       inject(ThemeService).init();
       inject(CultureService).init();
+      inject(SeoService).init();
       return inject(AuthService).loadSession();
     }),
   ],

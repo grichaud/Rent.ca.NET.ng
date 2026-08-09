@@ -11,8 +11,8 @@ import { roleGuard } from './core/auth/auth.guard';
  * presupuesto de 500 kB, y quien entra a una ficha de alquiler no necesita descargar el
  * panel de filtros ni la home.
  *
- * Las pantallas que aun apuntan a PagePlaceholder se construyen en fases posteriores del
- * PRP; las rutas existen desde ya para que los enlaces del header y del footer no rompan.
+ * Desde la Fase 12 ya no queda ninguna pantalla apuntando a PagePlaceholder: `landlords`, la
+ * ultima, se construyo junto al SEO por ser una pagina publica que iba a acabar indexada.
  */
 function localeRoutes(): Routes {
   return [
@@ -34,8 +34,7 @@ function localeRoutes(): Routes {
     },
     {
       path: 'landlords',
-      loadComponent: () => import('./shared/ui/page-placeholder').then((m) => m.PagePlaceholder),
-      data: { title: 'For Landlords' },
+      loadComponent: () => import('./features/content/landlords-page').then((m) => m.LandlordsPage),
     },
     // Las pantallas de autenticacion cuelgan de AuthShell, que las presenta centradas y sin
     // barra de navegacion, igual que el _LayoutAuth.cshtml del origen.

@@ -19,6 +19,7 @@ using Rent.Api.Features.Listings;
 using Rent.Api.Features.Maps;
 using Rent.Api.Features.RenterPortal;
 using Rent.Api.Features.Search;
+using Rent.Api.Features.Seo;
 using Rent.Api.Infrastructure.Data;
 using Rent.Api.Infrastructure.Data.Seed;
 using Rent.Api.Infrastructure.Identity;
@@ -193,6 +194,9 @@ app.MapHomeEndpoints();
 app.MapSearchEndpoints();
 app.MapListingsEndpoints();
 app.MapMapEndpoints();
+
+// Inventario de URLs para el sitemap.xml, que arma y sirve el servidor de SSR (Fase 12).
+app.MapSitemapEndpoints();
 
 // Autenticacion (Fase 6).
 app.MapAuthEndpoints();

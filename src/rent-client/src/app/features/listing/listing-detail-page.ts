@@ -9,6 +9,10 @@ import { ApiService } from '../../core/api/api.service';
 import { InquiriesService } from '../../core/api/inquiries.service';
 import { Amenity, LeaseTerm, ListingDetail, PropertyType } from '../../core/api/api.types';
 import { CultureService } from '../../core/i18n/culture.service';
+import { breadcrumbJsonLd, listingJsonLd } from '../../core/seo/json-ld';
+import { toMetaDescription } from '../../core/seo/meta-text';
+import { SeoService } from '../../core/seo/seo.service';
+import { SITE_BASE_URL } from '../../core/seo/site-url';
 import { toFieldErrors } from '../auth/ui/auth-errors';
 import { formatPrice, formatTemplate } from '../../shared/format';
 import { FavoriteButton } from '../../shared/ui/favorite-button';
@@ -577,12 +581,59 @@ export class ListingDetailPage {
   protected readonly inquiryErrors = signal<string[]>([]);
 
   private readonly aiContext = inject(AiContextService);
+  private readonly seo = inject(SeoService);
+  private readonly siteUrl = inject(SITE_BASE_URL);
 
   constructor() {
     // El asistente necesita saber que ficha esta abierta para poder explicarla (get_property_details).
     // Se limpia al salir: si no, el chat seguiria creyendo que el usuario mira este piso.
     effect(() => this.aiContext.setProperty(this.listing()?.id ?? null));
     inject(DestroyRef).onDestroy(() => this.aiContext.setProperty(null));
+
+    effect(() => this.applySeo());
+  }
+
+  /**
+   * `<head>` de la ficha. Es la pagina que mas importa del sitio: es la que la gente busca y
+   * la unica con datos estructurados completos.
+   */
+  private applySeo(): void {
+    const p = this.listing();
+    if (!p) return;
+
+    const t = (key: string) => this.transloco.translate(key);
+
+    if (p.id === '') {
+      // Existe pero no describe nada: el titulo en ingles es el literal del origen. Se marca
+      // noindex para que un slug caducado no siga vivo en el indice como pagina de error.
+      this.seo.apply({ title: 'Listing not found', noIndex: true });
+      return;
+    }
+
+    const culture = this.culture.culture();
+    const description = toMetaDescription(
+      this.description(),
+      formatTemplate(t('seo.description.listing'), this.typeLabel(p.propertyType), p.city, p.province),
+    );
+
+    // La portada es la que la galeria pinta primero, no forzosamente la marcada como primary:
+    // la tarjeta social debe ensenar la misma foto que el visitante ve al llegar.
+    const cover = p.images[0]?.url ?? null;
+
+    this.seo.apply({
+      title: p.title,
+      description,
+      image: cover,
+      type: 'article',
+      jsonLd: [
+        listingJsonLd(this.siteUrl, culture, p, description),
+        breadcrumbJsonLd([
+          { name: t('common.rent'), url: `${this.siteUrl}/${culture}` },
+          { name: p.city, url: `${this.siteUrl}/${culture}/${p.citySlug}` },
+          { name: p.title, url: `${this.siteUrl}/${culture}/${p.citySlug}/${p.slug}` },
+        ]),
+      ],
+    });
   }
 
   protected submitInquiry(propertyId: string): void {
