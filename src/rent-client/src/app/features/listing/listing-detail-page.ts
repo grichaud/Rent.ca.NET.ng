@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { combineLatest, catchError, map, of, switchMap } from 'rxjs';
+import { AiContextService } from '../../core/ai/ai-context.service';
 import { ApiService } from '../../core/api/api.service';
 import { InquiriesService } from '../../core/api/inquiries.service';
 import { Amenity, LeaseTerm, ListingDetail, PropertyType } from '../../core/api/api.types';
@@ -574,6 +575,15 @@ export class ListingDetailPage {
   protected readonly inquirySending = signal(false);
   protected readonly inquirySent = signal(false);
   protected readonly inquiryErrors = signal<string[]>([]);
+
+  private readonly aiContext = inject(AiContextService);
+
+  constructor() {
+    // El asistente necesita saber que ficha esta abierta para poder explicarla (get_property_details).
+    // Se limpia al salir: si no, el chat seguiria creyendo que el usuario mira este piso.
+    effect(() => this.aiContext.setProperty(this.listing()?.id ?? null));
+    inject(DestroyRef).onDestroy(() => this.aiContext.setProperty(null));
+  }
 
   protected submitInquiry(propertyId: string): void {
     if (this.inquiryForm.invalid || this.inquirySending()) {

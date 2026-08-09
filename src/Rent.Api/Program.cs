@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Rent.Api.Domain;
 using Rent.Api.Features.Admin;
+using Rent.Api.Features.AiChat;
+using Rent.Api.Features.AiChat.Services;
+using Rent.Api.Features.AiChat.Tools;
 using Rent.Api.Features.Alerts;
 using Rent.Api.Features.Alerts.Engine;
 using Rent.Api.Features.Auth;
@@ -115,6 +118,46 @@ else
     builder.Services.AddSingleton<IEmailSender, NoOpEmailSender>();
 }
 
+// Asistente de IA (Fase 11). Mismo patron que el correo: sin clave se registra el sustituto
+// y el chat responde un aviso, para que un entorno sin credenciales siga siendo verificable.
+builder.Services.Configure<AiOptions>(builder.Configuration.GetSection(AiOptions.SectionName));
+
+var aiApiKey = builder.Configuration[$"{AiOptions.SectionName}:OpenRouterApiKey"];
+if (!string.IsNullOrWhiteSpace(aiApiKey))
+{
+    builder.Services.AddHttpClient<OpenRouterClient>(client =>
+    {
+        var aiBaseUrl = builder.Configuration[$"{AiOptions.SectionName}:BaseUrl"];
+        client.BaseAddress = new Uri(string.IsNullOrWhiteSpace(aiBaseUrl)
+            ? "https://openrouter.ai/api/v1/"
+            : aiBaseUrl.TrimEnd('/') + "/");
+        var timeout = builder.Configuration.GetValue<int?>(
+            $"{AiOptions.SectionName}:RequestTimeoutSeconds") ?? 60;
+        client.Timeout = TimeSpan.FromSeconds(timeout);
+    });
+    builder.Services.AddScoped<IOpenRouterClient>(sp => sp.GetRequiredService<OpenRouterClient>());
+}
+else
+{
+    builder.Services.AddSingleton<IOpenRouterClient, NoOpOpenRouterClient>();
+}
+
+// Las herramientas se registran por su tipo Y como IAiTool: el registro las descubre por la
+// interfaz, pero cada una necesita seguir siendo resoluble para el contenedor.
+builder.Services.AddScoped<SearchPropertiesTool>();
+builder.Services.AddScoped<GetCityInfoTool>();
+builder.Services.AddScoped<GetPropertyDetailsTool>();
+builder.Services.AddScoped<CreateAlertTool>();
+builder.Services.AddScoped<IAiTool>(sp => sp.GetRequiredService<SearchPropertiesTool>());
+builder.Services.AddScoped<IAiTool>(sp => sp.GetRequiredService<GetCityInfoTool>());
+builder.Services.AddScoped<IAiTool>(sp => sp.GetRequiredService<GetPropertyDetailsTool>());
+builder.Services.AddScoped<IAiTool>(sp => sp.GetRequiredService<CreateAlertTool>());
+builder.Services.AddScoped<ToolRegistry>();
+
+// Singleton: la cuota por hora tiene que sobrevivir entre peticiones.
+builder.Services.AddSingleton<IRateLimiter, InMemoryRateLimiter>();
+builder.Services.AddScoped<IAiChatService, AiChatService>();
+
 builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection("ImageStorage"));
 
 var storageProvider = builder.Configuration.GetValue<string>("ImageStorage:Provider") ?? "Local";
@@ -170,6 +213,15 @@ app.MapLandlordListingEndpoints();
 // Panel de administracion (Fase 10).
 app.MapAdminEndpoints();
 app.MapAdminContentEndpoints();
+
+// Asistente de IA (Fase 11).
+app.MapAiChatEndpoints();
+
+if (string.IsNullOrWhiteSpace(aiApiKey))
+{
+    app.Logger.LogWarning(
+        "AI assistant not configured (missing Ai:OpenRouterApiKey). Falling back to NoOpOpenRouterClient.");
+}
 
 if (!builder.Configuration.IsGoogleConfigured())
 {

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
+import { AiChatWidget } from './features/ai-chat/ai-chat-widget';
 import { Footer } from './layout/footer';
 import { Header } from './layout/header';
 
@@ -17,7 +18,7 @@ const CHROMELESS_SEGMENTS = new Set([
 @Component({
   selector: 'app-root',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, Header, Footer],
+  imports: [RouterOutlet, Header, Footer, AiChatWidget],
   template: `
     @if (!chromeless()) {
       <app-header />
@@ -32,6 +33,9 @@ const CHROMELESS_SEGMENTS = new Set([
     </main>
     @if (!chromeless()) {
       <app-footer />
+      <!-- Igual que el origen, que solo incluye el widget en _Layout y no en el de auth:
+           un formulario de acceso no es sitio para un asistente flotante. -->
+      <app-ai-chat-widget />
     }
   `,
 })
