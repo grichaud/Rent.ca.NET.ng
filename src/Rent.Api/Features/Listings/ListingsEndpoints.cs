@@ -5,6 +5,7 @@ using Rent.Api.Features.Favorites;
 using Rent.Api.Features.Search;
 using Rent.Api.Features.Shared;
 using Rent.Api.Infrastructure.Data;
+using Rent.Api.Infrastructure.Http;
 
 namespace Rent.Api.Features.Listings;
 
@@ -204,6 +205,7 @@ public static class ListingsEndpoints
             return Results.Ok(dto);
         })
         .AllowAnonymous()
+        .WithPublicCache()
         .WithName("GetListingDetail");
     }
 }

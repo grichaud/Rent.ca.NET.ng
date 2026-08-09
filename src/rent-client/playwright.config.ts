@@ -73,6 +73,12 @@ export default defineConfig({
       env: {
         PORT: '4000',
         API_BASE_URL: API_URL,
+        // La cache del SSR se apaga para los E2E. No es que estorbe hoy —pasan con ella—, es
+        // que los acopla al ORDEN de los ficheros: si un test anonimo cachea /en/toronto antes
+        // de que el del propietario publique un anuncio, el suyo no aparece y el fallo no se
+        // parece en nada a la causa. La cache tiene sus propias comprobaciones en
+        // `scripts/validate-proxy.ps1`, que es donde toca probarla.
+        SSR_CACHE_TTL_SECONDS: '0',
       },
       reuseExistingServer: !process.env['CI'],
       timeout: 120_000,

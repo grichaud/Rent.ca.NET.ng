@@ -1,0 +1,55 @@
+name: CI
+
+# Compila y prueba en cada cambio. NO despliega: eso es cosa de deploy.yml.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: src/rent-client/package-lock.json
+
+      - name: Compilar la API
+        run: dotnet build --configuration Release
+
+      # Los tests corren contra SQLite en memoria (ver AuthApiFactory), asi que no hace falta
+      # ninguna base de datos en el runner.
+      - name: Tests de la API
+        run: dotnet test --configuration Release --no-build --verbosity normal
+
+      - name: Instalar dependencias del cliente
+        working-directory: src/rent-client
+        run: npm ci
+
+      # `dotnet build` en verde NO significa que la app arranque: con un frontend Angular, un
+      # TypeScript o una plantilla rotos pasan desapercibidos. Este paso es el que lo cubre.
+      - name: Compilar el cliente (incluye el SSR)
+        working-directory: src/rent-client
+        run: npx ng build
+
+      - name: Guardar el build del cliente
+        uses: actions/upload-artifact@v4
+        with:
+          name: rent-client-dist
+          path: src/rent-client/dist/rent-client
+          retention-days: 5
+
+# Los E2E de Playwright NO corren aqui a proposito: necesitan SQL Server y una base sembrada,
+# y en el runner habria que levantar un contenedor y sembrarla en cada ejecucion. Se ejecutan
+# en local con `npm run e2e` antes de publicar. Si algun dia se quiere en CI, el camino es un
+# servicio `mcr.microsoft.com/mssql/server` y apuntar ConnectionStrings__DefaultConnection a el.

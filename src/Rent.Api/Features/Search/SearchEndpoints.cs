@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using Rent.Api.Features.Shared;
 using Rent.Api.Infrastructure.Data;
+using Rent.Api.Infrastructure.Http;
 
 namespace Rent.Api.Features.Search;
 
@@ -43,6 +44,7 @@ public static class SearchEndpoints
                 result.TotalPages));
         })
         .AllowAnonymous()
+        .WithPublicCache()
         .WithName("SearchByCity");
 
         app.MapGet("/api/cities", async (AppDbContext db, bool? featured, CancellationToken ct) =>
@@ -54,6 +56,7 @@ public static class SearchEndpoints
             return Results.Ok(cities.Select(c => c.ToDto()).ToList());
         })
         .AllowAnonymous()
+        .WithPublicCache()
         .WithName("GetCities");
     }
 }

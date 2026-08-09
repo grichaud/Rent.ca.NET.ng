@@ -5,6 +5,7 @@ using Rent.Api.Features.Favorites;
 using Rent.Api.Features.Search;
 using Rent.Api.Features.Shared;
 using Rent.Api.Infrastructure.Data;
+using Rent.Api.Infrastructure.Http;
 
 namespace Rent.Api.Features.Home;
 
@@ -95,6 +96,7 @@ public static class HomeEndpoints
                 latest.Select(c => c.ToDto()).ToList()));
         })
         .AllowAnonymous()
+        .WithPublicCache()
         .WithName("GetHome");
     }
 }

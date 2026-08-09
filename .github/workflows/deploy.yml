@@ -1,0 +1,89 @@
+name: Deploy
+
+# Publica las dos App Service. Se dispara al empujar a main y tambien a mano.
+#
+# No hay paso de migraciones: la API las aplica al arrancar, esperando antes a que la base
+# serverless salga de auto-pausa. Un `dotnet ef database update` desde el runner tendria ademas
+# que atravesar el firewall del servidor SQL, que hoy solo admite servicios de Azure.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  # Dos despliegues a la vez sobre el mismo App Service se pisan.
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  api:
+    name: API (.NET)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Publicar
+        run: dotnet publish src/Rent.Api/Rent.Api.csproj -c Release -o publish
+
+      - name: Desplegar
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: rent-ca-net-ng-api
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_API }}
+          package: publish
+
+      - name: Comprobar que responde
+        run: |
+          for i in $(seq 1 40); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' https://rent-ca-net-ng-api.azurewebsites.net/health)
+            if [ "$code" = "200" ]; then echo "API viva"; exit 0; fi
+            sleep 10
+          done
+          echo "La API no respondio tras el despliegue"; exit 1
+
+  ssr:
+    name: SSR (Angular + Node)
+    runs-on: ubuntu-latest
+    needs: api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: src/rent-client/package-lock.json
+
+      - name: Instalar dependencias
+        working-directory: src/rent-client
+        run: npm ci
+
+      - name: Compilar
+        working-directory: src/rent-client
+        run: npx ng build
+
+      # Se publica el contenido de dist/rent-client tal cual: server.mjs resuelve el navegador
+      # como `../browser` desde su propia carpeta, asi que el par server/ + browser/ tiene que
+      # quedar en la raiz. El comando de arranque es `node server/server.mjs`.
+      #
+      # El bundle del servidor es autocontenido (solo importa modulos nativos de Node), asi que
+      # no hace falta subir node_modules ni dejar que Oryx compile en el App Service.
+      - name: Desplegar
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: rent-ca-net-ng
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_SSR }}
+          package: src/rent-client/dist/rent-client
+
+      - name: Comprobar que responde
+        run: |
+          for i in $(seq 1 40); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' https://rent-ca-net-ng.azurewebsites.net/en)
+            if [ "$code" = "200" ]; then echo "SSR vivo"; exit 0; fi
+            sleep 10
+          done
+          echo "El SSR no respondio tras el despliegue"; exit 1

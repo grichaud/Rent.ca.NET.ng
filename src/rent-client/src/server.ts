@@ -227,6 +227,93 @@ function escapeXml(value: string): string {
 }
 
 /**
+ * Cache en memoria del HTML renderizado.
+ *
+ * En el plan F1 esto no es una optimizacion, es lo que mantiene la app viva (PRP 12.3). Cada
+ * visita renderiza en servidor Y pide datos a la API, y hay dos cuotas que se agotan a la vez:
+ *
+ * - Los **60 minutos de CPU al dia** compartidos por SSR y API. Al superarlos, las dos apps se
+ *   paran hasta el dia siguiente.
+ * - Los **100.000 vCore-segundos al mes** de la base gratuita. La base se despierta con cada
+ *   consulta y el retardo minimo de auto-pausa es de UNA HORA, asi que una sola visita cuesta
+ *   una hora de cuota. Si se agotan, la base queda inaccesible hasta el mes siguiente y no hay
+ *   forma de revivirla sin habilitar cargos.
+ *
+ * Sirviendo desde aqui no se renderiza ni se llama a la API, asi que la base se queda dormida.
+ *
+ * Lo que NO se cachea, y por que:
+ *
+ * - **Peticiones con sesion.** El HTML lleva el nombre del usuario en la cabecera y su estado
+ *   de favoritos en cada tarjeta. Compartir esa pagina seria servirle la sesion de una persona
+ *   a otra: no es un fallo de rendimiento, es una fuga de datos.
+ * - **Las zonas privadas**, aunque llegaran sin cookie: lo unico que devuelven es un 302 al
+ *   login, que no merece guardarse.
+ * - **Cualquier cosa que no sea un GET con 200.**
+ *
+ * Y la clave incluye el TEMA, porque el servidor pinta claro u oscuro segun la cookie del
+ * visitante; sin eso, quien pidiera claro recibiria la pagina oscura de otro.
+ */
+const CACHE_TTL_MS = Number(process.env['SSR_CACHE_TTL_SECONDS'] ?? 300) * 1000;
+const CACHE_MAX_ENTRIES = Number(process.env['SSR_CACHE_MAX_ENTRIES'] ?? 200);
+
+/** Cookie de sesion de ASP.NET Identity: su presencia significa "esta pagina es personal". */
+const SESSION_COOKIE = '.AspNetCore.Identity.Application';
+
+interface CachedRender {
+  body: string;
+  headers: Record<string, string>;
+  expiresAt: number;
+}
+
+const renderCache = new Map<string, CachedRender>();
+
+function cacheKeyFor(req: express.Request): string | null {
+  if (CACHE_TTL_MS <= 0) return null;
+  if (req.method !== 'GET') return null;
+  if ((req.headers.cookie ?? '').includes(SESSION_COOKIE)) return null;
+
+  const path = req.path;
+  const segments = path.split('/').filter(Boolean);
+  if (PRIVATE_SEGMENTS.has(segments[1] ?? '')) return null;
+
+  // El tema entra en la clave; el resto de cookies no influye en el HTML de una pagina publica.
+  const theme = (req.headers.cookie ?? '').includes('rentca-theme=light') ? 'light' : 'dark';
+
+  // Y el ORIGEN tambien, por dos motivos independientes:
+  //
+  // 1. **Seguridad.** Angular rechaza con 400 las peticiones cuya cabecera Host no reconoce
+  //    (proteccion contra SSRF). Esa comprobacion vive dentro del render, asi que servir desde
+  //    la cache antes de llamarlo la SALTABA por completo: bastaba con que alguien hubiera
+  //    pedido la misma ruta antes para que un host ajeno recibiera 200. Metiendo el origen en
+  //    la clave, un host desconocido nunca acierta una entrada y acaba siempre en el render,
+  //    que lo rechaza.
+  // 2. **Correccion.** El `<head>` que produce la Fase 12 lleva el canonical, los `hreflang` y
+  //    `og:url` construidos con el origen de la peticion. Compartir una entrada entre hosts
+  //    serviria el dominio equivocado dentro del HTML.
+  return `${originOf(req)}|${theme}|${req.originalUrl}`;
+}
+
+function rememberRender(key: string, body: string, headers: Record<string, string>): void {
+  // Poda por antiguedad de insercion: los Map de JavaScript conservan el orden, asi que la
+  // primera clave es la mas vieja. Con un catalogo de decenas de ciudades el tope no se roza,
+  // pero un rastreador pidiendo URLs inventadas llenaria la memoria de un F1 sin esto.
+  if (renderCache.size >= CACHE_MAX_ENTRIES) {
+    const oldest = renderCache.keys().next().value;
+    if (oldest !== undefined) renderCache.delete(oldest);
+  }
+  renderCache.set(key, { body, headers, expiresAt: Date.now() + CACHE_TTL_MS });
+}
+
+/**
+ * Primeros segmentos (tras el idioma) que nunca se cachean. Ojo: `landlord` es el portal
+ * privado y `landlords` la landing publica — la comparacion es por segmento exacto.
+ */
+const PRIVATE_SEGMENTS = new Set([
+  'login', 'signup', 'forgot-password', 'reset-password', 'external-login-confirm',
+  'renter', 'landlord', 'admin',
+]);
+
+/**
  * Serve static files from /browser
  */
 app.use(
@@ -254,11 +341,45 @@ app.use(
  * fijar un dominio canonico unico.
  */
 app.use((req, res, next) => {
+  const key = cacheKeyFor(req);
+
+  if (key) {
+    const hit = renderCache.get(key);
+    if (hit && hit.expiresAt > Date.now()) {
+      res.status(200);
+      for (const [name, value] of Object.entries(hit.headers)) res.setHeader(name, value);
+      res.setHeader('x-ssr-cache', 'hit');
+      res.end(hit.body);
+      return;
+    }
+    if (hit) renderCache.delete(key);
+  }
+
   angularApp
     .handle(req, { cookie: req.headers.cookie ?? '', origin: originOf(req) })
-    .then((response) =>
-      response ? writeResponseToNodeResponse(response, res) : next(),
-    )
+    .then(async (response) => {
+      if (!response) return next();
+      if (!key || response.status !== 200) {
+        return writeResponseToNodeResponse(response, res);
+      }
+
+      // Para poder guardarlo hay que leer el cuerpo entero, asi que la respuesta se escribe a
+      // mano en vez de con writeResponseToNodeResponse: ese consume el stream y no lo devuelve.
+      const body = await response.text();
+      const headers: Record<string, string> = {};
+      response.headers.forEach((value, name) => {
+        // Set-Cookie NO se guarda jamas: seria repartir la cookie de un visitante entre todos
+        // los que reciban esta entrada de cache.
+        if (name.toLowerCase() !== 'set-cookie') headers[name] = value;
+      });
+
+      rememberRender(key, body, headers);
+
+      res.status(200);
+      for (const [name, value] of Object.entries(headers)) res.setHeader(name, value);
+      res.setHeader('x-ssr-cache', 'miss');
+      res.end(body);
+    })
     .catch(next);
 });
 

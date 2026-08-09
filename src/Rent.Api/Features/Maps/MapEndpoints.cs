@@ -1,5 +1,6 @@
 using Rent.Api.Domain;
 using Rent.Api.Features.Search;
+using Rent.Api.Infrastructure.Http;
 
 namespace Rent.Api.Features.Maps;
 
@@ -43,6 +44,7 @@ public static class MapEndpoints
                     m.PrimaryImageUrl, m.FromPrice, m.MinBedrooms)).ToList()));
         })
         .AllowAnonymous()
+        .WithPublicCache()
         .WithName("GetMapMarkers");
     }
 }

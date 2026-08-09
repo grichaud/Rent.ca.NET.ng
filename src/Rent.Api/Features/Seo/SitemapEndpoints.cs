@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Rent.Api.Domain;
 using Rent.Api.Infrastructure.Data;
+using Rent.Api.Infrastructure.Http;
 
 namespace Rent.Api.Features.Seo;
 
@@ -88,6 +89,7 @@ public static class SitemapEndpoints
             return Results.Ok(new SitemapResponse(cityDtos, listingDtos));
         })
         .AllowAnonymous()
+        .WithPublicCache()
         .WithName("GetSitemap");
     }
 }

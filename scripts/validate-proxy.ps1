@@ -113,6 +113,49 @@ $rejected = curl.exe -s -o NUL -w '%{http_code}' -H 'Host: evil.example.com' "$s
 Check 'El host de despliegue se acepta' ($allowed -eq '200') "$azure_host -> $allowed"
 Check 'Un host ajeno se rechaza' ($rejected -eq '400') "evil.example.com -> $rejected"
 
+# 8) Cache del SSR (PRP 12.3). Lo que se comprueba no es la velocidad: es que una pagina
+#    PERSONAL no acabe nunca en una cache compartida.
+#    Se usa una URL con query propia porque el arranque del script ya pidio /en y esa entrada
+#    esta caliente.
+$probe = "/en/about?cachecheck=$([guid]::NewGuid().ToString('N'))"
+$first = [string](curl.exe -s -o NUL -w '%{header_json}' "$ssr_url$probe")
+$second = [string](curl.exe -s -o NUL -w '%{header_json}' "$ssr_url$probe")
+Check 'La primera visita renderiza y la segunda sale de cache' (
+  $first -match '"x-ssr-cache":\["miss"\]' -and $second -match '"x-ssr-cache":\["hit"\]'
+) 'miss -> hit'
+
+# La misma URL con la cookie de tema claro es OTRA entrada: el servidor pinta el HTML segun
+# ella, y compartir la entrada serviria la pagina oscura a quien pidio la clara.
+$light = [string](curl.exe -s -o NUL -w '%{header_json}' -H 'Cookie: rentca-theme=light' "$ssr_url$probe")
+Check 'El tema no comparte entrada de cache' ($light -match '"x-ssr-cache":\["miss"\]') 'claro y oscuro por separado'
+
+# Con sesion NO se cachea: el HTML lleva el nombre del usuario y sus favoritos.
+# El header pinta `fullName || email`, y el admin sembrado se llama "Site Admin": buscar su
+# correo daria un falso verde, porque no aparece nunca.
+$authed = [string](curl.exe -s -b $jar -o NUL -w '%{header_json}' "$ssr_url$probe")
+$authedHtml = (curl.exe -s -b $jar "$ssr_url/en") -join "`n"
+Check 'Una peticion con sesion no toca la cache' (
+  $authed -notmatch '"x-ssr-cache"' -and $authedHtml -match 'Site Admin'
+) 'sin cabecera de cache y con el usuario dentro'
+
+# Y despues de todo lo anterior, un anonimo sigue viendo la version anonima: si la peticion
+# identificada hubiera contaminado la entrada, aqui apareceria el nombre del administrador.
+$anonHtml = (curl.exe -s "$ssr_url/en") -join "`n"
+Check 'La sesion no se filtra a la pagina anonima' (
+  $anonHtml -notmatch 'Site Admin' -and $anonHtml -match 'Sign In'
+) 'anonimo sigue anonimo'
+
+# Las zonas privadas no se cachean nunca, ni siquiera sin cookie (solo devuelven un 302).
+$private = [string](curl.exe -s -o NUL -w '%{header_json}' "$ssr_url/en/renter")
+Check 'Las zonas privadas quedan fuera de la cache' ($private -notmatch '"x-ssr-cache"') '/en/renter'
+
+# 9) Cabeceras de cache de la API: publico para anonimos, nada para quien tiene sesion.
+$apiAnon = [string](curl.exe -s -o NUL -w '%{header_json}' "$ssr_url/api/home")
+$apiAuth = [string](curl.exe -s -b $jar -o NUL -w '%{header_json}' "$ssr_url/api/home")
+Check 'La API se cachea solo para anonimos' (
+  $apiAnon -match 'public, max-age=300' -and $apiAuth -match 'private, no-store'
+) 'public/anonimo vs private/sesion'
+
 $results | Format-Table -AutoSize
 
 $failed = @($results | Where-Object { $_.Estado -eq 'FALLA' }).Count
