@@ -26,9 +26,15 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
 {
     private readonly SqliteConnection _connection = new("DataSource=:memory:");
 
+    // Web root propio y desechable: las fotos que suben los tests del portal del landlord
+    // irian a parar al wwwroot del repo si no.
+    private readonly string _webRoot = Path.Combine(Path.GetTempPath(), $"rentca-tests-{Guid.NewGuid():N}");
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+        Directory.CreateDirectory(_webRoot);
+        builder.UseWebRoot(_webRoot);
 
         builder.ConfigureServices(services =>
         {
@@ -114,9 +120,41 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
         return propertyId;
     }
 
+    /// <summary>Escribe la bio del perfil de un landlord (p.ej. para simular el centinela del seeder).</summary>
+    public async Task TagLandlordDescriptionAsync(string email, string description)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+        var user = await userManager.FindByEmailAsync(email)
+            ?? throw new InvalidOperationException($"No existe el usuario {email}.");
+        var profile = await db.LandlordProfiles.FirstAsync(p => p.Id == user.Id);
+        profile.Description = description;
+        await db.SaveChangesAsync();
+    }
+
+    public async Task<string?> GetLandlordDescriptionAsync(string email)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+        var user = await userManager.FindByEmailAsync(email)
+            ?? throw new InvalidOperationException($"No existe el usuario {email}.");
+        return await db.LandlordProfiles
+            .Where(p => p.Id == user.Id)
+            .Select(p => p.Description)
+            .FirstOrDefaultAsync();
+    }
+
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
-        if (disposing) _connection.Dispose();
+        if (disposing)
+        {
+            _connection.Dispose();
+            try { Directory.Delete(_webRoot, recursive: true); } catch { /* mejor huerfano que test rojo */ }
+        }
     }
 }

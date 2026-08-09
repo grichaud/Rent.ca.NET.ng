@@ -3,26 +3,30 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { catchError, of } from 'rxjs';
-import { RenterService } from '../../core/api/renter.service';
+import { LandlordService } from '../../core/api/landlord.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { FieldErrors } from '../../core/auth/auth.types';
 import { toFieldErrors } from '../auth/ui/auth-errors';
 import { PasswordField } from '../auth/ui/password-field';
 import { Icon } from '../../shared/ui/icon/icon';
 
-/** Port de RenterPortal/Pages/Account.cshtml: perfil y cambio de contrasena. */
+/**
+ * Port de LandlordManage/Pages/Account.cshtml: perfil + marca (empresa, web, bio) y cambio
+ * de contrasena. El centinela del seeder en la bio lo gestiona la API; aqui la bio llega y
+ * se manda siempre limpia.
+ */
 @Component({
-  selector: 'app-renter-account-page',
+  selector: 'app-landlord-account-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, TranslocoPipe, Icon, PasswordField],
   template: `
     <div class="space-y-6 max-w-2xl">
       <header>
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-          {{ 'renter.accountTitle' | transloco }}
+          {{ 'landlord.accountTitle' | transloco }}
         </h1>
         <p class="mt-1 text-sm text-slate-600 dark:text-white/70">
-          {{ 'renter.accountSubtitle' | transloco }}
+          {{ 'landlord.accountSubtitle' | transloco }}
         </p>
       </header>
 
@@ -36,19 +40,19 @@ import { Icon } from '../../shared/ui/icon/icon';
         </div>
       }
 
-      <section class="glass-card p-6">
-        <h2 class="font-semibold text-slate-900 dark:text-white mb-1">
-          {{ 'renter.accountProfile' | transloco }}
-        </h2>
-        <p class="text-sm text-slate-500 dark:text-white/60 mb-4">
-          {{ 'renter.accountEmail' | transloco }}
-          <span class="text-slate-700 dark:text-white/80">{{ profile()?.email }}</span>
-        </p>
+      <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" class="space-y-6">
+        @for (message of profileErrors()[''] ?? []; track message) {
+          <p role="alert" class="block text-sm text-red-600 dark:text-red-400">{{ message }}</p>
+        }
 
-        <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" class="space-y-3">
-          @for (message of profileErrors()[''] ?? []; track message) {
-            <p role="alert" class="block text-sm text-red-600 dark:text-red-400">{{ message }}</p>
-          }
+        <section class="glass-card p-6 space-y-3">
+          <h2 class="font-semibold text-slate-900 dark:text-white mb-1">
+            {{ 'renter.accountProfile' | transloco }}
+          </h2>
+          <p class="text-sm text-slate-500 dark:text-white/60 mb-4">
+            {{ 'renter.accountEmail' | transloco }}
+            <span class="text-slate-700 dark:text-white/80">{{ profile()?.email }}</span>
+          </p>
 
           <div>
             <label for="fullName" class="block text-sm text-slate-700 dark:text-white/80 mb-1">{{
@@ -99,6 +103,95 @@ import { Icon } from '../../shared/ui/icon/icon';
               <span role="alert" class="text-xs text-red-600 dark:text-red-400">{{ message }}</span>
             }
           </div>
+        </section>
+
+        <section class="glass-card p-6 space-y-3">
+          <div class="flex items-center gap-2 mb-1">
+            <h2 class="font-semibold text-slate-900 dark:text-white">
+              {{ 'landlord.accountBrand' | transloco }}
+            </h2>
+            @if (profile()?.isVerified) {
+              <span
+                class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
+              >
+                <app-icon name="shield-check" class="h-3 w-3" />
+                {{ 'detail.verified' | transloco }}
+              </span>
+            }
+          </div>
+          <p class="text-sm text-slate-500 dark:text-white/60 mb-4">
+            {{ 'landlord.accountBrandHint' | transloco }}
+          </p>
+
+          <div>
+            <label for="companyName" class="block text-sm text-slate-700 dark:text-white/80 mb-1">
+              {{ 'landlord.accountCompany' | transloco }}
+              <span class="text-slate-400 dark:text-white/40 font-normal">{{
+                'landlord.formOptional' | transloco
+              }}</span>
+            </label>
+            <div class="relative">
+              <span
+                class="absolute left-3 top-1/2 -translate-y-1/2 z-10 text-slate-400 dark:text-white/40"
+              >
+                <app-icon name="building" class="h-4 w-4" />
+              </span>
+              <input
+                id="companyName"
+                formControlName="companyName"
+                [placeholder]="'landlord.accountCompanyPlaceholder' | transloco"
+                class="glass-input !pl-10"
+              />
+            </div>
+            @for (message of profileErrors()['companyName'] ?? []; track message) {
+              <span role="alert" class="text-xs text-red-600 dark:text-red-400">{{ message }}</span>
+            }
+          </div>
+
+          <div>
+            <label for="website" class="block text-sm text-slate-700 dark:text-white/80 mb-1">
+              {{ 'landlord.accountWebsite' | transloco }}
+              <span class="text-slate-400 dark:text-white/40 font-normal">{{
+                'landlord.formOptional' | transloco
+              }}</span>
+            </label>
+            <div class="relative">
+              <span
+                class="absolute left-3 top-1/2 -translate-y-1/2 z-10 text-slate-400 dark:text-white/40"
+              >
+                <app-icon name="external-link" class="h-4 w-4" />
+              </span>
+              <input
+                id="website"
+                type="url"
+                formControlName="website"
+                placeholder="https://example.com"
+                class="glass-input !pl-10"
+              />
+            </div>
+            @for (message of profileErrors()['website'] ?? []; track message) {
+              <span role="alert" class="text-xs text-red-600 dark:text-red-400">{{ message }}</span>
+            }
+          </div>
+
+          <div>
+            <label for="description" class="block text-sm text-slate-700 dark:text-white/80 mb-1">
+              {{ 'landlord.accountBio' | transloco }}
+              <span class="text-slate-400 dark:text-white/40 font-normal">{{
+                'landlord.formOptional' | transloco
+              }}</span>
+            </label>
+            <textarea
+              id="description"
+              formControlName="description"
+              rows="4"
+              class="glass-input"
+              [placeholder]="'landlord.accountBioPlaceholder' | transloco"
+            ></textarea>
+            @for (message of profileErrors()['description'] ?? []; track message) {
+              <span role="alert" class="text-xs text-red-600 dark:text-red-400">{{ message }}</span>
+            }
+          </div>
 
           <button
             type="submit"
@@ -108,8 +201,8 @@ import { Icon } from '../../shared/ui/icon/icon';
             <app-icon name="check" class="h-4 w-4" />
             {{ 'renter.accountSaveProfile' | transloco }}
           </button>
-        </form>
-      </section>
+        </section>
+      </form>
 
       <section class="glass-card p-6">
         <h2 class="font-semibold text-slate-900 dark:text-white mb-1">
@@ -194,20 +287,23 @@ import { Icon } from '../../shared/ui/icon/icon';
     </div>
   `,
 })
-export class RenterAccountPage {
-  private readonly renter = inject(RenterService);
+export class LandlordAccountPage {
+  private readonly landlord = inject(LandlordService);
   private readonly auth = inject(AuthService);
   private readonly transloco = inject(TranslocoService);
   private readonly fb = inject(FormBuilder);
 
   protected readonly profile = toSignal(
-    this.renter.profile().pipe(catchError(() => of(null))),
+    this.landlord.profile().pipe(catchError(() => of(null))),
     { initialValue: null },
   );
 
   protected readonly profileForm = this.fb.nonNullable.group({
     fullName: ['', Validators.required],
     phone: [''],
+    companyName: [''],
+    website: [''],
+    description: [''],
   });
 
   protected readonly passwordForm = this.fb.nonNullable.group({
@@ -221,7 +317,6 @@ export class RenterAccountPage {
   protected readonly savingProfile = signal(false);
   protected readonly changingPassword = signal(false);
 
-  /** Clave de renter.* que manda la API en el exito; se traduce al pintar. */
   private readonly successKey = signal<string | null>(null);
   protected readonly flashSuccess = computed(() => {
     const key = this.successKey();
@@ -229,13 +324,18 @@ export class RenterAccountPage {
   });
 
   constructor() {
-    // El formulario existe antes que la respuesta del perfil: se rellena cuando llega —
-    // pero solo si esta intacto, para no pisar lo que el usuario ya escribio si la
-    // respuesta llega tarde.
     effect(() => {
       const profile = this.profile();
+      // Solo si el formulario esta intacto: si la respuesta llega tarde y el usuario ya
+      // escribio, pisar sus cambios sin aviso es peor que no precargar.
       if (profile && this.profileForm.pristine) {
-        this.profileForm.patchValue({ fullName: profile.fullName, phone: profile.phone ?? '' });
+        this.profileForm.patchValue({
+          fullName: profile.fullName,
+          phone: profile.phone ?? '',
+          companyName: profile.companyName ?? '',
+          website: profile.website ?? '',
+          description: profile.description ?? '',
+        });
       }
     });
   }
@@ -251,8 +351,14 @@ export class RenterAccountPage {
     this.successKey.set(null);
 
     const raw = this.profileForm.getRawValue();
-    this.renter
-      .updateProfile({ fullName: raw.fullName, phone: raw.phone.trim() ? raw.phone : null })
+    this.landlord
+      .updateProfile({
+        fullName: raw.fullName,
+        phone: raw.phone.trim() ? raw.phone : null,
+        companyName: raw.companyName.trim() ? raw.companyName : null,
+        website: raw.website.trim() ? raw.website : null,
+        description: raw.description.trim() ? raw.description : null,
+      })
       .subscribe({
         next: (response) => {
           this.savingProfile.set(false);
@@ -277,7 +383,7 @@ export class RenterAccountPage {
     this.passwordErrors.set({});
     this.successKey.set(null);
 
-    this.renter.changePassword(this.passwordForm.getRawValue()).subscribe({
+    this.landlord.changePassword(this.passwordForm.getRawValue()).subscribe({
       next: (response) => {
         this.changingPassword.set(false);
         this.successKey.set(response.message);
@@ -290,11 +396,7 @@ export class RenterAccountPage {
     });
   }
 
-  /**
-   * Los errores accionables viajan como claves de traduccion (renter.accountIncorrectCurrent,
-   * renter.accountGoogle); el resto (politicas de Identity) llega ya como texto. Se traduce lo
-   * que resuelva y se deja pasar lo demas, como hace el formulario de consulta del detalle.
-   */
+  /** Igual que la cuenta del renter: se traducen las claves y se deja pasar el texto plano. */
   private translated(error: unknown, fallback: string): FieldErrors {
     const errors = toFieldErrors(error, fallback);
     const result: FieldErrors = {};

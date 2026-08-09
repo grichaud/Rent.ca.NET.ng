@@ -72,9 +72,45 @@ function localeRoutes(): Routes {
     },
     {
       path: 'landlord',
-      loadComponent: () => import('./shared/ui/page-placeholder').then((m) => m.PagePlaceholder),
-      data: { title: 'Landlord Dashboard' },
+      loadComponent: () => import('./features/landlord/landlord-shell').then((m) => m.LandlordShell),
       canActivate: [roleGuard('Landlord')],
+      children: [
+        {
+          path: '',
+          loadComponent: () =>
+            import('./features/landlord/dashboard-page').then((m) => m.LandlordDashboardPage),
+        },
+        {
+          path: 'listings',
+          loadComponent: () =>
+            import('./features/landlord/listings-page').then((m) => m.LandlordListingsPage),
+        },
+        {
+          path: 'listings/create',
+          loadComponent: () =>
+            import('./features/landlord/listing-form-page').then((m) => m.LandlordListingFormPage),
+        },
+        {
+          path: 'listings/edit/:id',
+          loadComponent: () =>
+            import('./features/landlord/listing-form-page').then((m) => m.LandlordListingFormPage),
+        },
+        {
+          path: 'listings/delete/:id',
+          loadComponent: () =>
+            import('./features/landlord/listing-delete-page').then((m) => m.LandlordListingDeletePage),
+        },
+        {
+          path: 'inbox',
+          loadComponent: () =>
+            import('./features/landlord/inbox-page').then((m) => m.LandlordInboxPage),
+        },
+        {
+          path: 'account',
+          loadComponent: () =>
+            import('./features/landlord/account-page').then((m) => m.LandlordAccountPage),
+        },
+      ],
     },
     {
       path: 'renter',

@@ -10,6 +10,7 @@ using Rent.Api.Features.Email;
 using Rent.Api.Features.Favorites;
 using Rent.Api.Features.Home;
 using Rent.Api.Features.Inquiries;
+using Rent.Api.Features.LandlordPortal;
 using Rent.Api.Features.Listings;
 using Rent.Api.Features.Maps;
 using Rent.Api.Features.RenterPortal;
@@ -18,6 +19,12 @@ using Rent.Api.Infrastructure.Data;
 using Rent.Api.Infrastructure.Data.Seed;
 using Rent.Api.Infrastructure.Identity;
 using Rent.Api.Infrastructure.Storage;
+
+// El web root tiene que existir ANTES de crear el builder: si la carpeta falta cuando el
+// host arranca (p.ej. ejecutando el .dll desde bin/, donde el build no la copia),
+// WebRootPath queda null, el storage local de fotos rechaza todo archivo y /uploads
+// devuelve 404. Crearla aqui cubre bin, publish y dev por igual.
+Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"));
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -128,6 +135,10 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+// Sirve wwwroot/uploads (las fotos de listings del storage Local). Va antes de la
+// autenticacion: las imagenes son publicas, como en el origen.
+app.UseStaticFiles();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -150,6 +161,10 @@ app.MapAlertDispatchEndpoint();
 
 // Portal del renter (Fase 8).
 app.MapRenterPortalEndpoints();
+
+// Portal del landlord (Fase 9).
+app.MapLandlordPortalEndpoints();
+app.MapLandlordListingEndpoints();
 
 if (!builder.Configuration.IsGoogleConfigured())
 {
