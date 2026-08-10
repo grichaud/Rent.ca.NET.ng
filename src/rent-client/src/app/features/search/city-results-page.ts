@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { ChangeDetectionStrategy, Component, PLATFORM_ID, computed, effect, inject } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -12,6 +13,7 @@ import { SITE_BASE_URL } from '../../core/seo/site-url';
 import { formatTemplate } from '../../shared/format';
 import { Icon } from '../../shared/ui/icon/icon';
 import { PropertyCardComponent } from '../../shared/ui/property-card';
+import { SearchMap } from './search-map';
 import { FilterState, PRICE_CAP, SearchFilters, emptyFilters } from './search-filters';
 
 type ViewMode = 'grid' | 'list' | 'map';
@@ -23,7 +25,7 @@ const CITY_NOT_FOUND: SearchResponse = {
 @Component({
   selector: 'app-city-results-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslocoPipe, Icon, PropertyCardComponent, SearchFilters],
+  imports: [RouterLink, TranslocoPipe, Icon, PropertyCardComponent, SearchFilters, SearchMap],
   template: `
     <div class="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
       @if (result(); as res) {
@@ -107,18 +109,18 @@ const CITY_NOT_FOUND: SearchResponse = {
               } @else if (view() === 'map') {
                 <div class="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-4">
                   <!--
-                    El mapa real necesita la clave de Google Maps (seccion Maps del PRP).
-                    Mientras tanto se deja el hueco con las mismas dimensiones para no
-                    romper el layout de dos columnas.
+                    El mapa solo se monta en el NAVEGADOR: el API de Google necesita document,
+                    y al buscador no le aporta nada — lo que indexa es la lista de anuncios,
+                    que ya viaja en el HTML servido. En servidor queda el hueco con las mismas
+                    dimensiones para que el layout de dos columnas no salte al hidratar.
                   -->
-                  <div
-                    class="glass-card h-[55vh] lg:h-[800px] flex items-center justify-center text-center p-8 text-slate-500 dark:text-white/50"
-                  >
-                    <div>
-                      <app-icon name="map" class="h-10 w-10 mx-auto mb-3 opacity-60" />
-                      <p class="text-sm">{{ res.properties.length }} listings on the map</p>
+                  @if (isBrowser) {
+                    <div class="glass-card p-0 overflow-hidden h-[55vh] lg:h-[800px]">
+                      <app-search-map [citySlug]="citySlug()" [filters]="mapFilters()" />
                     </div>
-                  </div>
+                  } @else {
+                    <div class="glass-card h-[55vh] lg:h-[800px]"></div>
+                  }
                   <div class="space-y-4 lg:overflow-y-auto lg:max-h-[800px] pr-1">
                     @for (p of res.properties; track p.id) {
                       <app-property-card [item]="p" variant="list" />
@@ -149,6 +151,13 @@ export class CityResultsPage {
   private readonly seo = inject(SeoService);
   private readonly siteUrl = inject(SITE_BASE_URL);
   protected readonly culture = inject(CultureService);
+  protected readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+
+  /**
+   * Los mismos filtros que la rejilla. El mapa y la lista tienen que enseñar EL MISMO conjunto:
+   * si divergieran, cambiar de vista pareceria perder pisos.
+   */
+  protected readonly mapFilters = computed<ApiFilters>(() => this.apiFilters());
 
   constructor() {
     effect(() => this.applySeo());

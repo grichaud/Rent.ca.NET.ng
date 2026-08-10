@@ -3,8 +3,12 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    // `types` es una lista CERRADA: con ella puesta, TypeScript deja de incluir el resto de
+    // paquetes @types automaticamente. Por eso "google.maps" tiene que aparecer aqui aunque
+    // este instalado, o el compilador no encuentra el namespace `google`.
     "types": [
-      "node"
+      "node",
+      "google.maps"
     ]
   },
   "include": [

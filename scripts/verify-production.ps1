@@ -86,6 +86,16 @@ Check 'El SSR reenvia /api a la API' ($apiType -match 'application/json') $apiTy
 $apiHeaders = [string](curl.exe -s -o NUL -w '%{header_json}' "$BaseUrl/api/home")
 Check 'La API se cachea para anonimos' ($apiHeaders -match 'public, max-age=') 'Cache-Control publico'
 
+# Las features que dependen de una clave de terceros. Aqui no se comprueba que la clave sea
+# valida —eso lo dira Google o OpenRouter—, sino que el servidor la tiene: sin ella la feature
+# queda apagada en silencio y nadie se entera hasta que un usuario la usa.
+$mapsKey = (curl.exe -s "$BaseUrl/api/config" | ConvertFrom-Json).mapsApiKey
+Check 'La clave de mapas esta configurada' (-not [string]::IsNullOrWhiteSpace($mapsKey)) `
+    $(if ($mapsKey) { "presente ($($mapsKey.Length) car.)" } else { 'AUSENTE: el mapa no se pintara' })
+
+$providers = (curl.exe -s "$BaseUrl/api/auth/me" | ConvertFrom-Json).externalProviders
+Check 'El inicio de sesion con Google se anuncia' ($providers -contains 'Google') ($providers -join ', ')
+
 # --- 5. Cache del SSR: nunca mezcla anonimo con sesion -----------------------------------
 
 $probe = "/en/about?smoke=$([guid]::NewGuid().ToString('N'))"

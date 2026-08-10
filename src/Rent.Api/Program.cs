@@ -10,6 +10,7 @@ using Rent.Api.Features.AiChat.Tools;
 using Rent.Api.Features.Alerts;
 using Rent.Api.Features.Alerts.Engine;
 using Rent.Api.Features.Auth;
+using Rent.Api.Features.Config;
 using Rent.Api.Features.Email;
 using Rent.Api.Features.Favorites;
 using Rent.Api.Features.Home;
@@ -197,6 +198,9 @@ app.MapMapEndpoints();
 
 // Inventario de URLs para el sitemap.xml, que arma y sirve el servidor de SSR (Fase 12).
 app.MapSitemapEndpoints();
+
+// Ajustes que necesita el navegador (Fase 14): hoy solo la clave publica de Google Maps.
+app.MapConfigEndpoints();
 
 // Autenticacion (Fase 6).
 app.MapAuthEndpoints();
