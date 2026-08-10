@@ -21,6 +21,8 @@ declare global {
     google?: typeof google;
     markerClusterer?: { MarkerClusterer: new (options: object) => unknown };
     __rentcaMapsCallback?: () => void;
+    /** Gancho de Google para fallos de autenticacion de la clave. Ver `onAuthFailure`. */
+    gm_authFailure?: () => void;
   }
 }
 
@@ -147,6 +149,31 @@ export class GoogleMapsLoader {
     });
 
     return this.clustererPromise;
+  }
+
+  /**
+   * Avisa cuando Google RECHAZA la clave.
+   *
+   * Este caso no lo cubre el `catch` de `load()`: el script se descarga con 200 y el mapa se
+   * construye sin lanzar; Google falla despues, por dentro, y lo unico que hace es pintar su
+   * propio cartel gris —"Oops! Something went wrong", en ingles y sin traducir— dentro de
+   * nuestro layout, mas un error en consola. Es justo el escenario mas probable en un
+   * despliegue nuevo: la clave existe pero esta restringida al dominio anterior
+   * (`RefererNotAllowedMapError`).
+   *
+   * `gm_authFailure` es el unico gancho que Google ofrece para enterarse.
+   */
+  onAuthFailure(callback: () => void): () => void {
+    if (!this.isBrowser) return () => undefined;
+
+    const previous = window.gm_authFailure;
+    window.gm_authFailure = () => {
+      previous?.();
+      callback();
+    };
+    return () => {
+      window.gm_authFailure = previous;
+    };
   }
 
   isDark(): boolean {

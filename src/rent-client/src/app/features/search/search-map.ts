@@ -40,8 +40,12 @@ type Estado = 'cargando' | 'listo' | 'error';
       <div #canvas class="h-full w-full rounded-2xl overflow-hidden"></div>
 
       @if (estado() !== 'listo') {
+        <!--
+          Fondo OPACO a proposito. Cuando Google rechaza la clave ya ha pintado su propio
+          cartel gris dentro del lienzo; un aviso transparente se leeria encima del suyo.
+        -->
         <div
-          class="absolute inset-0 flex items-center justify-center text-center p-8 text-slate-500 dark:text-white/50"
+          class="absolute inset-0 z-10 flex items-center justify-center text-center p-8 bg-white dark:bg-slate-900 text-slate-500 dark:text-white/50"
         >
           <div>
             <app-icon name="map" class="h-10 w-10 mx-auto mb-3 opacity-60" />
@@ -73,6 +77,7 @@ export class SearchMap {
   private markers: google.maps.Marker[] = [];
   private clusterer: { clearMarkers?: () => void } | null = null;
   private stopWatchingTheme: (() => void) | null = null;
+  private stopWatchingAuth: (() => void) | null = null;
 
   constructor() {
     // Un cambio de ciudad o de filtros re-dibuja los marcadores sobre el MISMO mapa: recrearlo
@@ -84,8 +89,14 @@ export class SearchMap {
       void this.render(citySlug, filters);
     });
 
+    // Si Google rechaza la clave (tipicamente porque esta restringida a otro dominio), el mapa
+    // no lanza: se queda con el cartel gris de Google dentro de nuestra pagina. Se sustituye
+    // por nuestro mensaje, que ademas esta traducido.
+    this.stopWatchingAuth = this.maps.onAuthFailure(() => this.estado.set('error'));
+
     inject(DestroyRef).onDestroy(() => {
       this.stopWatchingTheme?.();
+      this.stopWatchingAuth?.();
       this.clearMarkers();
     });
   }
