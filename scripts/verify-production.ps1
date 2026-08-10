@@ -96,6 +96,26 @@ Check 'La clave de mapas esta configurada' (-not [string]::IsNullOrWhiteSpace($m
 $providers = (curl.exe -s "$BaseUrl/api/auth/me" | ConvertFrom-Json).externalProviders
 Check 'El inicio de sesion con Google se anuncia' ($providers -contains 'Google') ($providers -join ', ')
 
+# El fallo que tumbo el login con Google el 2026-08-10, y que ningun otro control veia: el
+# `redirect_uri` apuntaba al host de la API en vez de al publico, asi que Google devolvia al
+# usuario a un dominio DISTINTO del que guardo su cookie de correlacion -> 500. Se comprueba
+# sobre el 302 real del challenge, que es donde vive el dato.
+if ($providers -contains 'Google') {
+    $challengeHeaders = (curl.exe -s -o NUL -D - "$BaseUrl/api/auth/external/challenge?provider=Google&culture=en") -join "`n"
+    $redirectUri = ''
+    if ($challengeHeaders -match 'redirect_uri=([^&\s]+)') {
+        $redirectUri = [uri]::UnescapeDataString($Matches[1])
+    }
+    Check 'La vuelta de Google apunta al host publico' (
+        $redirectUri.StartsWith("$BaseUrl/")
+    ) $redirectUri
+
+    # Y esa ruta tiene que estar reenviada por el SSR: si cayera en el renderer de Angular,
+    # Google devolveria al usuario a una pagina "no encontrada" en vez de a la API.
+    $callbackCode = Get-Code '/signin-google'
+    Check 'El SSR reenvia /signin-google a la API' ($callbackCode -ne '200') "$callbackCode (200 = lo comio el renderer)"
+}
+
 # --- 5. Cache del SSR: nunca mezcla anonimo con sesion -----------------------------------
 
 $probe = "/en/about?smoke=$([guid]::NewGuid().ToString('N'))"

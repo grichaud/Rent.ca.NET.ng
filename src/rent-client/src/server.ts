@@ -60,7 +60,26 @@ const apiProxy = createProxyMiddleware({
   // Se filtra por ruta en vez de montar en `app.use('/api', ...)`: Express RECORTA el prefijo
   // del punto de montaje, asi que la API recibiria `/home` en lugar de `/api/home` y
   // contestaria 404 a todo. Con `pathFilter` la URL llega intacta.
-  pathFilter: ['/api/**', '/uploads/**'],
+  //
+  // Va como FUNCION y no como lista de globs. Con globs, anadir `/signin-google` a la lista
+  // hacia que dejara de reenviarse `/api/**` —comprobado: la home caia en el renderer— y el
+  // sintoma no apuntaba a la causa. Una funcion dice exactamente que se reenvia y no depende de
+  // como interprete los comodines la libreria.
+  //
+  // `/signin-google` es la unica ruta de la API que NO cuelga de `/api`: es el CallbackPath por
+  // defecto del handler de Google, y quien la abre es el navegador al volver del proveedor. Si
+  // Google devolviera directamente al host de la API, esa vuelta ocurriria en un dominio
+  // distinto del que emitio la cookie de correlacion —que se guarda en ESTE host, porque el
+  // challenge tambien pasa por aqui— y el login moriria con un 500. Reenviarla mantiene todo el
+  // viaje en la unica puerta publica, que es lo que ya asume el resto de la topologia.
+  pathFilter: (path: string) => {
+    const soloRuta = path.split('?')[0];
+    return (
+      soloRuta.startsWith('/api/') ||
+      soloRuta.startsWith('/uploads/') ||
+      soloRuta === '/signin-google'
+    );
+  },
   // El cuerpo se transmite tal cual llega, sin esperar a tenerlo entero.
   selfHandleResponse: false,
   on: {

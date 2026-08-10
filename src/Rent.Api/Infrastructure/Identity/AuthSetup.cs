@@ -66,6 +66,26 @@ public static class AuthSetup
                 {
                     options.ClientId = googleClientId;
                     options.ClientSecret = googleClientSecret;
+
+                    // Sin esto, CUALQUIER fallo del proveedor sale como 500 con la pantalla de
+                    // error de ASP.NET: el handler remoto relanza la excepcion por defecto. Le
+                    // pasa a quien cancela en la pantalla de Google, a quien tarda tanto que su
+                    // cookie de correlacion caduca y a quien vuelve con un enlace ya usado —
+                    // casos normales, no averias. El callback propio ya sabe degradar con
+                    // `?authError=`; esto lleva alli tambien los fallos que ocurren ANTES.
+                    options.Events.OnRemoteFailure = context =>
+                    {
+                        var logger = context.HttpContext.RequestServices
+                            .GetRequiredService<ILoggerFactory>()
+                            .CreateLogger("Auth.ExternalRemoteFailure");
+                        logger.LogWarning(
+                            context.Failure,
+                            "El login externo fallo antes de llegar al callback propio.");
+
+                        context.Response.Redirect($"{clientBaseUrl}/en/login?authError=google-failed");
+                        context.HandleResponse();
+                        return Task.CompletedTask;
+                    };
                 });
         }
 
@@ -80,6 +100,49 @@ public static class AuthSetup
         });
 
         return services;
+    }
+
+    /// <summary>
+    /// Hace que los dos saltos del login de Google se calculen con el host PUBLICO del sitio y
+    /// no con el de esta API.
+    ///
+    /// El problema que resuelve: el servidor SSR es la unica puerta publica y reenvia con
+    /// <c>changeOrigin</c>, asi que esta API se ve a si misma como <c>...-api...</c>. Con eso
+    /// construia un <c>redirect_uri</c> apuntando a su propio host, y Google devolvia al usuario
+    /// a un DOMINIO DISTINTO del que emitio la cookie de correlacion. El navegador no la manda
+    /// —son dominios distintos— y el login moria en 500. Y aunque validara, la cookie de sesion
+    /// del callback se guardaria en el host de la API, invisible para el sitio: este flujo no
+    /// podia funcionar de ninguna manera.
+    ///
+    /// Se fuerza el host en las DOS patas y no solo en la primera porque el intercambio del
+    /// codigo vuelve a enviar el <c>redirect_uri</c> y Google exige que sea identico al del
+    /// primer salto; cambiar solo uno mueve el fallo, no lo arregla.
+    ///
+    /// El valor sale de configuracion y NO de <c>X-Forwarded-Host</c>: esta API es alcanzable
+    /// directamente, asi que fiarse de una cabecera dejaria que un tercero decidiera a donde
+    /// vuelve el usuario tras identificarse. Y se limita a las rutas del flujo externo, para no
+    /// cambiar como se ve el host en el resto de la API.
+    /// </summary>
+    public static IApplicationBuilder UsePublicOriginForExternalAuth(
+        this IApplicationBuilder app, IConfiguration configuration)
+    {
+        if (!configuration.IsGoogleConfigured()) return app;
+
+        var publicBase = configuration[$"{AppOptions.SectionName}:ClientBaseUrl"];
+        if (!Uri.TryCreate(publicBase, UriKind.Absolute, out var publicUri)) return app;
+
+        return app.Use((context, next) =>
+        {
+            var path = context.Request.Path;
+            if (path.StartsWithSegments("/signin-google")
+                || path.StartsWithSegments("/api/auth/external/challenge"))
+            {
+                context.Request.Scheme = publicUri.Scheme;
+                context.Request.Host = new HostString(publicUri.Authority);
+            }
+
+            return next();
+        });
     }
 
     public static bool IsGoogleConfigured(this IConfiguration configuration)

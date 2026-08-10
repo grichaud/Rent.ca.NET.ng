@@ -185,6 +185,10 @@ if (app.Environment.IsDevelopment())
 // autenticacion: las imagenes son publicas, como en el origen.
 app.UseStaticFiles();
 
+// Antes de UseAuthentication: el handler de Google construye su `redirect_uri` a partir del
+// host de la peticion, y tiene que ser el PUBLICO, no el de esta API. Ver el metodo.
+app.UsePublicOriginForExternalAuth(builder.Configuration);
+
 app.UseAuthentication();
 app.UseAuthorization();
 
