@@ -12,6 +12,26 @@ import { expect, test } from '@playwright/test';
  * `scripts/verify-production.ps1`: exige una clave real y llamadas a Google que no tienen
  * sitio en una suite de pruebas.
  */
+test.describe('Contador de resultados', () => {
+  test('sustituye el marcador en vez de imprimirlo', async ({ page }) => {
+    // Salio en una captura de produccion: "8 {0} rentals in Toronto". Ningun test lo veia
+    // porque todos comprobaban el numero o el nombre de la ciudad por separado.
+    await page.goto('/en/toronto');
+
+    const texto = await page.getByText(/rentals in/).first().textContent();
+    expect(texto).not.toContain('{0}');
+    expect(texto).toMatch(/\d+\s*rentals in/);
+  });
+
+  test('en frances usa su propia frase', async ({ page }) => {
+    await page.goto('/fr/toronto');
+
+    const texto = await page.getByText(/locations/).first().textContent();
+    expect(texto).not.toContain('{0}');
+    expect(texto).toMatch(/\d+\s*locations/);
+  });
+});
+
 test.describe('Vista de mapa', () => {
   test('el conmutador de vista lleva al mapa y lo deja en la URL', async ({ page }) => {
     await page.goto('/en/toronto');

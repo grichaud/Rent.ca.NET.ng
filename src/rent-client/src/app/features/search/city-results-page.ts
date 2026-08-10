@@ -60,9 +60,18 @@ const CITY_NOT_FOUND: SearchResponse = {
                 class="glass-base flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3"
                 aria-label="Search results controls"
               >
+                <!--
+                  El texto se parte por el marcador {0} en vez de imprimir la cadena cruda al
+                  lado del numero. Pintarlos por separado dejaba un "8 {0} rentals in Toronto"
+                  literal en pantalla, y ademas solo funcionaba en ingles: en frances el
+                  marcador va en el mismo sitio pero la frase es otra.
+                -->
                 <p class="text-sm text-gray-600 dark:text-white/70">
-                  <span class="font-semibold text-base text-gray-900 dark:text-white">{{ res.totalCount }}</span>
-                  {{ 'listings.resultsCount' | transloco }}
+                  {{ resultsLabel().before
+                  }}<span class="font-semibold text-base text-gray-900 dark:text-white">{{
+                    res.totalCount
+                  }}</span
+                  >{{ resultsLabel().after }}
                   <span class="font-medium text-gray-900 dark:text-white">{{ res.city.name }}</span>
                 </p>
 
@@ -158,6 +167,18 @@ export class CityResultsPage {
    * si divergieran, cambiar de vista pareceria perder pisos.
    */
   protected readonly mapFilters = computed<ApiFilters>(() => this.apiFilters());
+
+  /**
+   * El contador de resultados, partido por su marcador para poder resaltar el numero.
+   *
+   * Depende de la cultura activa para rehacerse al cambiar de idioma: en frances la frase es
+   * "{0} locations à", no una traduccion palabra por palabra de la inglesa.
+   */
+  protected readonly resultsLabel = computed(() => {
+    this.culture.culture();
+    const [before, after = ''] = this.transloco.translate('listings.resultsCount').split('{0}');
+    return { before, after };
+  });
 
   constructor() {
     effect(() => this.applySeo());
