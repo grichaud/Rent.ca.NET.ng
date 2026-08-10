@@ -29,7 +29,7 @@ import { CultureService } from '../core/i18n/culture.service';
     <main class="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 py-16">
       <a
         [routerLink]="['/', culture.culture()]"
-        class="inline-flex items-baseline mb-8"
+        class="inline-flex items-center mb-8"
         aria-label="Rent.ca home"
       >
         <span class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Rent</span>
@@ -40,6 +40,10 @@ import { CultureService } from '../core/i18n/culture.service';
         <span
           class="ml-2 text-[10px] font-bold tracking-widest text-brand-600 dark:text-brand-400 border border-brand-500/40 rounded px-1.5 py-0.5"
           >.NET</span
+        >
+        <span
+          class="ml-1 text-[10px] font-bold tracking-widest text-red-600 dark:text-red-400 border border-red-500/40 rounded px-1.5 py-0.5"
+          >NG</span
         >
       </a>
 

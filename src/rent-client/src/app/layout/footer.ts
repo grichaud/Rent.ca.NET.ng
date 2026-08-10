@@ -47,15 +47,6 @@ import { BrandLogo } from './brand-logo';
                   >Next.js version</a
                 >
               </li>
-              <li>
-                <a
-                  href="https://github.com/grichaud/Rent.ca.NET"
-                  target="_blank"
-                  rel="noopener"
-                  [attr.class]="linkClass"
-                  >Source on GitHub</a
-                >
-              </li>
             </ul>
           </div>
 

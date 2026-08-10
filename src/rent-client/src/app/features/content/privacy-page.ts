@@ -16,15 +16,14 @@ import { applyStaticSeo } from '../../core/seo/static-seo';
           </h1>
         </div>
         <div class="glass-card p-8 sm:p-10">
+          <!--
+            El origen remata esta frase con un enlace al repositorio. Aqui no: el repositorio es
+            privado y el enlace daba 404 a cualquier visitante. El texto se sirve desde
+            core/i18n/translation-overrides.ts con una version que termina sola, porque el del
+            origen acaba en "please see the" contando con que alguien le pegue el enlace detras.
+          -->
           <p class="text-slate-600 dark:text-white/70 leading-relaxed">
             {{ 'footer.privacyText' | transloco }}
-            <a
-              href="https://github.com/grichaud/Rent.ca.NET"
-              target="_blank"
-              rel="noopener"
-              class="text-brand-600 dark:text-brand-400 underline"
-              >{{ 'footer.privacyRepo' | transloco }}</a
-            >.
           </p>
         </div>
       </section>

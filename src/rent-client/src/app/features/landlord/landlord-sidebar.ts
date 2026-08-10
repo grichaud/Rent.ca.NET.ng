@@ -31,7 +31,7 @@ interface SidebarLink {
             <app-icon name="building" class="h-4 w-4 text-white" />
           </div>
           <span class="min-w-0">
-            <span class="flex items-baseline gap-1">
+            <span class="flex items-center gap-1">
               <span
                 class="text-base font-bold text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors"
                 >Rent.ca</span
@@ -39,6 +39,10 @@ interface SidebarLink {
               <span
                 class="text-[9px] font-bold tracking-widest text-brand-600 dark:text-brand-400 border border-brand-500/40 rounded px-1 py-0.5"
                 >.NET</span
+              >
+              <span
+                class="text-[9px] font-bold tracking-widest text-red-600 dark:text-red-400 border border-red-500/40 rounded px-1 py-0.5"
+                >NG</span
               >
             </span>
             <span class="block text-xs text-slate-500 dark:text-white/50">{{

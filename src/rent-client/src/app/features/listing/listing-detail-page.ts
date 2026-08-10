@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, PLATFORM_ID, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -18,6 +19,7 @@ import { formatPrice, formatTemplate } from '../../shared/format';
 import { FavoriteButton } from '../../shared/ui/favorite-button';
 import { Icon } from '../../shared/ui/icon/icon';
 import { PropertyCardComponent } from '../../shared/ui/property-card';
+import { ListingMap } from './listing-map';
 
 type Tab = 'floorplans' | 'amenities' | 'about';
 
@@ -52,6 +54,7 @@ const GALLERY_GRADIENTS = [
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     RouterLink, TranslocoPipe, ReactiveFormsModule, Icon, PropertyCardComponent, FavoriteButton,
+    ListingMap,
   ],
   template: `
     @if (listing(); as p) {
@@ -351,6 +354,31 @@ const GALLERY_GRADIENTS = [
                     </h2>
                     <p class="text-slate-700 dark:text-white/80 whitespace-pre-line">{{ description() }}</p>
                   </section>
+
+                  @if (p.latitude !== null && p.longitude !== null) {
+                    <section class="glass-card p-6 mt-4">
+                      <h2
+                        class="font-semibold text-slate-900 dark:text-white mb-3 inline-flex items-center gap-2"
+                      >
+                        <app-icon name="map-pin" class="h-4 w-4 text-brand-500" />
+                        {{ 'detail.locationLabel' | transloco }}
+                      </h2>
+                      <!--
+                        El mapa solo se monta en el NAVEGADOR: el API de Google necesita document.
+                        Hoy la guarda no llega a evitar nada —esta pestaña arranca cerrada, asi que
+                        su contenido no se renderiza en servidor— pero es lo que sostiene esa
+                        propiedad: sin ella, hacer que la pestaña activa viniera de la URL tumbaria
+                        el render del servidor, y el fallo no se pareceria en nada a la causa.
+                        No hace falta hueco de reserva: nada de esto existe antes de hidratar.
+                      -->
+                      @if (isBrowser) {
+                        <app-listing-map [lat]="p.latitude" [lng]="p.longitude" [title]="p.title" />
+                      }
+                      <p class="text-xs text-slate-500 dark:text-white/50 mt-2">
+                        {{ 'detail.locationApprox' | transloco }}
+                      </p>
+                    </section>
+                  }
                 }
               }
             </article>
@@ -566,6 +594,7 @@ export class ListingDetailPage {
   private readonly transloco = inject(TranslocoService);
   private readonly fb = inject(FormBuilder);
   protected readonly culture = inject(CultureService);
+  protected readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   private readonly similarTrack = viewChild<ElementRef<HTMLElement>>('similarTrack');
 
