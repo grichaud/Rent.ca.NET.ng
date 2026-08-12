@@ -5,9 +5,17 @@ name: Deploy
 # No hay paso de migraciones: la API las aplica al arrancar, esperando antes a que la base
 # serverless salga de auto-pausa. Un `dotnet ef database update` desde el runner tendria ademas
 # que atravesar el firewall del servidor SQL, que hoy solo admite servicios de Azure.
+# Un commit de documentacion NO debe desplegar. Desplegar reinicia las dos apps, y arrancar
+# ejecuta migraciones y seeders, que **despiertan la base**: el despertar mas corto de Azure SQL
+# cuesta una hora entera de cuota, y el presupuesto son ~55 horas al mes. Un commit de markdown
+# no puede costar el 2% del mes.
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
   workflow_dispatch:
 
 concurrency:
