@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using System.Security.Cryptography;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using Rent.Api.Domain;
 using Rent.Api.Infrastructure.Identity;
 
@@ -8,7 +10,18 @@ namespace Rent.Api.Infrastructure.Data.Seed;
 public static class SamplePropertiesSeeder
 {
     private const string DemoLandlordEmail = "demo.landlord@rentca.net";
-    private const string DemoLandlordPassword = "DemoLandlord1!";
+
+    /// <summary>
+    /// Solo para desarrollo, igual que <see cref="AdminUserSeeder.DevelopmentPassword"/>: esta
+    /// en el codigo y en BASELINE.md, asi que es publica.
+    ///
+    /// Este propietario es el dueno de TODO el catalogo de demo. Sembrar una contrasena conocida
+    /// en una URL abierta a internet dejaria que cualquiera que lea el repositorio entre al portal
+    /// y borre los anuncios del sitio. Fuera de desarrollo se genera una aleatoria que no se
+    /// guarda en ningun sitio: nadie necesita iniciar sesion como el, solo tiene que existir para
+    /// ser el propietario de las fichas.
+    /// </summary>
+    public const string DevelopmentPassword = "DemoLandlord1!";
 
     // Bump this when changing the sample data so prod re-seeds itself.
     // The version string is stored in the demo landlord's Description field. If it
@@ -18,9 +31,10 @@ public static class SamplePropertiesSeeder
     public static async Task SeedAsync(
         AppDbContext db,
         UserManager<ApplicationUser> userManager,
+        IHostEnvironment environment,
         CancellationToken ct = default)
     {
-        var (landlordId, profile) = await EnsureDemoLandlordAsync(db, userManager);
+        var (landlordId, profile) = await EnsureDemoLandlordAsync(db, userManager, environment);
 
         // Auto-upgrade prod databases whose seed predates this version. The signal is
         // the LandlordProfile.Description sentinel; on mismatch we wipe the demo-landlord
@@ -57,11 +71,25 @@ public static class SamplePropertiesSeeder
         await db.SaveChangesAsync(ct);
     }
 
-    private static async Task<(Guid id, LandlordProfile profile)> EnsureDemoLandlordAsync(AppDbContext db, UserManager<ApplicationUser> userManager)
+    private static async Task<(Guid id, LandlordProfile profile)> EnsureDemoLandlordAsync(
+        AppDbContext db,
+        UserManager<ApplicationUser> userManager,
+        IHostEnvironment environment)
     {
         var existing = await userManager.FindByEmailAsync(DemoLandlordEmail);
         if (existing is not null)
         {
+            // Auto-reparacion de los despliegues que ya sembraron la contrasena publica. Sin esto,
+            // el blindaje de abajo solo protegeria a las bases NUEVAS: la cuenta ya existe en
+            // produccion y esta rama sale antes de tocarla. Se comprueba la contrasena conocida en
+            // vez de rotar a ciegas en cada arranque, asi que despues del primer arranque
+            // corregido esto no vuelve a escribir nada.
+            if (!environment.IsDevelopment() && await userManager.CheckPasswordAsync(existing, DevelopmentPassword))
+            {
+                var token = await userManager.GeneratePasswordResetTokenAsync(existing);
+                await userManager.ResetPasswordAsync(existing, token, GenerateUnguessablePassword());
+            }
+
             var existingProfile = await db.LandlordProfiles.FirstAsync(p => p.Id == existing.Id);
             return (existing.Id, existingProfile);
         }
@@ -74,7 +102,8 @@ public static class SamplePropertiesSeeder
             EmailConfirmed = true,
             FullName = "Demo Properties Inc."
         };
-        var result = await userManager.CreateAsync(user, DemoLandlordPassword);
+        var password = environment.IsDevelopment() ? DevelopmentPassword : GenerateUnguessablePassword();
+        var result = await userManager.CreateAsync(user, password);
         if (!result.Succeeded)
             throw new InvalidOperationException("Failed to create demo landlord: " + string.Join("; ", result.Errors.Select(e => e.Description)));
 
@@ -93,6 +122,18 @@ public static class SamplePropertiesSeeder
         await db.SaveChangesAsync();
         return (user.Id, profile);
     }
+
+    /// <summary>
+    /// Contrasena aleatoria que NO se guarda ni se registra en ningun sitio: se descarta en cuanto
+    /// Identity la convierte en hash. Es deliberado — la cuenta solo tiene que existir para ser la
+    /// propietaria del catalogo de demo, nadie inicia sesion con ella. Si algun dia hiciera falta
+    /// entrar, la via es el restablecimiento por correo, no una constante en el codigo.
+    ///
+    /// El sufijo garantiza los requisitos de Identity (mayuscula, minuscula, digito y simbolo) sin
+    /// depender de que los bytes aleatorios los cumplan por casualidad.
+    /// </summary>
+    private static string GenerateUnguessablePassword() =>
+        Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)) + "Aa1!";
 
     /// <summary>
     /// Real-estate stock photos. Each ID was visually verified to be a residential property.

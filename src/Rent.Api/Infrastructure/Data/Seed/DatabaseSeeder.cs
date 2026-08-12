@@ -39,10 +39,10 @@ public static class DatabaseSeeder
         await AmenitiesSeeder.SeedAsync(db, ct);
 
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<Domain.ApplicationUser>>();
-        await SamplePropertiesSeeder.SeedAsync(db, userManager, ct);
+        var environment = scope.ServiceProvider.GetRequiredService<IHostEnvironment>();
+        await SamplePropertiesSeeder.SeedAsync(db, userManager, environment, ct);
         await RentSpecialsSeeder.SeedAsync(db, ct);
 
-        var environment = scope.ServiceProvider.GetRequiredService<IHostEnvironment>();
         var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
         await AdminUserSeeder.SeedAsync(userManager, environment, configuration, logger, ct);
     }
