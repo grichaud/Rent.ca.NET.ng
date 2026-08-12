@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, Component, PLATFORM_ID, computed, effect, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, PLATFORM_ID, RESPONSE_INIT, computed, effect, inject } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -159,6 +159,8 @@ export class CityResultsPage {
   private readonly transloco = inject(TranslocoService);
   private readonly seo = inject(SeoService);
   private readonly siteUrl = inject(SITE_BASE_URL);
+  /** Solo existe durante el render del servidor; en el navegador es null. Ver `applySeo()`. */
+  private readonly responseInit = inject(RESPONSE_INIT, { optional: true });
   protected readonly culture = inject(CultureService);
   protected readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
@@ -202,6 +204,15 @@ export class CityResultsPage {
       // Mismo literal que pinta la plantilla, y sin indexar: una ciudad inexistente no debe
       // dejar rastro en el buscador.
       this.seo.apply({ title: 'City not found', noIndex: true });
+
+      // Y ademas el ESTADO tiene que decir 404. Hasta ahora se servia esta pantalla con un 200:
+      // un "soft 404", que para un rastreador significa "esta pagina existe y esta bien", y para
+      // cualquiera que mire codigos de estado es sencillamente falso. `noindex` tapa el problema
+      // de indexacion pero no arregla la mentira.
+      //
+      // `responseInit` es null en el navegador (solo existe durante el render del servidor),
+      // asi que la comprobacion no sobra.
+      if (this.responseInit) this.responseInit.status = 404;
       return;
     }
 

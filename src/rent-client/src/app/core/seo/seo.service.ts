@@ -33,6 +33,14 @@ const PRIVATE_SEGMENTS = new Set([
 ]);
 
 /**
+ * Imagen social por defecto: la misma foto que el hero de la home, recortada a 1200x630, que
+ * es la proporcion que esperan Open Graph y Twitter. Vive en Unsplash como el resto del
+ * catalogo; el repositorio no tiene ningun asset propio para esto.
+ */
+const DEFAULT_SOCIAL_IMAGE =
+  'https://images.unsplash.com/photo-1517935706615-2717063c2225?w=1200&h=630&fit=crop&q=80';
+
+/**
  * Capa de `<head>` para el SSR.
  *
  * Es la razon de ser de esta migracion: el origen sirve HTML completo pero su `<head>` solo
@@ -99,18 +107,22 @@ export class SeoService {
     this.setMeta('name', 'twitter:title', title);
     this.setMeta('name', 'twitter:description', description);
 
-    const image = page.image ? absoluteUrl(this.baseUrl, page.image) : null;
-    if (image) {
-      this.setMeta('property', 'og:image', image);
-      this.setMeta('name', 'twitter:image', image);
-      // `summary_large_image` sin imagen degrada a una tarjeta rota, asi que el tipo de
-      // tarjeta depende de que haya foto.
-      this.setMeta('name', 'twitter:card', 'summary_large_image');
-    } else {
-      this.removeMeta('property', 'og:image');
-      this.removeMeta('name', 'twitter:image');
-      this.setMeta('name', 'twitter:card', 'summary');
-    }
+    // Sin imagen la tarjeta social sale como un bloque de texto gris: es lo que ve quien
+    // comparte el enlace en LinkedIn o WhatsApp, y era el caso de la home y de todas las
+    // paginas de contenido. El defecto es la MISMA foto del hero, asi que la vista previa
+    // coincide con lo que se encuentra al abrir.
+    //
+    // Cualquier valor vacio cae al defecto, tambien `null`. Se probo distinguir `null`
+    // ("quitala") de `undefined` ("no tengo"), pero ninguna pantalla quiere quedarse sin
+    // tarjeta: las que pasan `null` lo hacen reenviando un campo opcional de la API —
+    // `image: city.imageUrl`— que significa "esta ciudad no trae foto", justo el caso del
+    // defecto. La distincion solo servia para dejar sin imagen a las ciudades sin foto.
+    const image = absoluteUrl(this.baseUrl, page.image || DEFAULT_SOCIAL_IMAGE);
+    this.setMeta('property', 'og:image', image);
+    this.setMeta('name', 'twitter:image', image);
+    // `summary_large_image` sin imagen degrada a una tarjeta rota. Ahora SIEMPRE hay imagen,
+    // asi que el tipo grande es incondicional; antes dependia de que la pantalla trajera foto.
+    this.setMeta('name', 'twitter:card', 'summary_large_image');
 
     if (page.noIndex) this.setMeta('name', 'robots', 'noindex, follow');
 

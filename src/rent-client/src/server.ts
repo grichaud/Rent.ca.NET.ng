@@ -36,6 +36,66 @@ const app = express();
 const angularApp = new AngularNodeAppEngine({ allowedHosts });
 
 /**
+ * Cabeceras de seguridad. Van ANTES que el proxy y que los estaticos para que las lleve toda
+ * respuesta, incluidas las de `/api` y las imagenes.
+ *
+ * `x-powered-by` se apaga porque anunciar "Express" solo le ahorra trabajo a quien busca
+ * versiones vulnerables.
+ *
+ * La CSP permite explicitamente lo que el sitio usa de verdad: los mapas de Google, las fotos
+ * de Unsplash y las fuentes de Google.
+ *
+ * **`'unsafe-inline'` en `script-src` es una concesion consciente, no un descuido.** Angular
+ * emite scripts en linea para la hidratacion, y `withEventReplay()` anade ademas un manejador
+ * de eventos en linea — y a los manejadores no les valen ni hash ni nonce (harian falta
+ * `'unsafe-hashes'`). Las alternativas eran quitar el event replay, que existe para que un clic
+ * hecho durante la hidratacion no se pierda —justo lo que pasa en un SSR que tarda—, o dejar la
+ * pagina rota. Se prefiere conservar la funcion y ser explicito aqui.
+ *
+ * Lo que la CSP SIGUE aportando con esa concesion: nadie puede cargar scripts de un dominio
+ * ajeno, ni enmarcar el sitio, ni reescribir `<base>`, ni mandar un formulario a otro host, ni
+ * cargar imagenes o abrir conexiones fuera de la lista. Si algun dia se retira el event replay,
+ * esto se puede endurecer con nonce.
+ */
+app.disable('x-powered-by');
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  // El sitio no pide camara, microfono ni ubicacion. Declararlo cierra la puerta a que lo haga
+  // un tercero embebido.
+  res.setHeader('Permissions-Policy', 'geolocation=(), camera=(), microphone=(), payment=()');
+  // Un ano, y solo sobre HTTPS: enviarlo por HTTP no significa nada y confunde al depurar.
+  // Sin `preload`, que es irreversible en la practica y no procede en un subdominio prestado.
+  if (req_isSecure(_req)) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  res.setHeader(
+    'Content-Security-Policy',
+    [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "object-src 'none'",
+      "frame-ancestors 'none'",
+      "form-action 'self'",
+      "img-src 'self' data: blob: https://images.unsplash.com https://*.googleapis.com https://*.gstatic.com https://*.ggpht.com",
+      "script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://maps.gstatic.com",
+      "worker-src 'self' blob:",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com data:",
+      "connect-src 'self' https://maps.googleapis.com https://*.googleapis.com",
+      "frame-src 'self' https://www.google.com",
+    ].join('; '),
+  );
+  next();
+});
+
+/** Detras del proxy de Azure la peticion llega por HTTP; el protocolo real viene en la cabecera. */
+function req_isSecure(req: express.Request): boolean {
+  return req.secure || (req.headers['x-forwarded-proto'] ?? '').toString().split(',')[0] === 'https';
+}
+
+/**
  * Reenvio de la API al navegador.
  *
  * Este servidor es la unica puerta publica: el navegador solo conoce SU host, asi que las
