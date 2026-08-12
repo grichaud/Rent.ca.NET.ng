@@ -95,6 +95,9 @@ const QUICK_CITIES = ['Toronto', 'Vancouver', 'Montreal', 'Calgary', 'Ottawa', '
           role="search"
         >
           <app-icon name="search" class="h-5 w-5 shrink-0 text-gray-400 dark:text-white/40" />
+          <!-- min-w-0 en el campo: un item flex no baja de su ancho intrinseco por defecto, y
+               el placeholder es largo. Sin esa clase el campo se niega a encoger y empuja al
+               boton de buscar fuera de pantalla en cualquier telefono (terminaba en 434px). -->
           <input
             #cityInput
             type="search"
@@ -103,7 +106,7 @@ const QUICK_CITIES = ['Toronto', 'Vancouver', 'Montreal', 'Calgary', 'Ottawa', '
             autocomplete="off"
             [placeholder]="'hero.searchPlaceholder' | transloco"
             [attr.aria-label]="'hero.searchPlaceholder' | transloco"
-            class="flex-1 bg-transparent border-0 outline-none text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/40 text-base focus:ring-0 px-4 py-1"
+            class="flex-1 min-w-0 bg-transparent border-0 outline-none text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/40 text-base focus:ring-0 px-4 py-1"
           />
           <button
             type="submit"

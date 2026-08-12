@@ -73,4 +73,22 @@ test.describe('Recorrido publico', () => {
 
     await expect(page.getByRole('heading', { level: 1 })).toContainText('City not found');
   });
+
+  test('el buscador de la home cabe en pantalla @mobile', async ({ page }) => {
+    await page.goto('/en');
+
+    const boton = page.getByRole('button', { name: 'Search rentals' });
+    await expect(boton).toBeVisible();
+
+    // Se comprueba el BOTON contra el viewport, no `scrollWidth` del documento. El fallo real
+    // (2026-08-12) no movia el scroll: el formulario desbordaba y un padre lo recortaba, asi que
+    // el boton quedaba fuera de pantalla con la pagina midiendo exactamente el ancho del movil.
+    // Una prueba de desbordamiento del documento pasa en verde con el CTA principal invisible.
+    const caja = await boton.boundingBox();
+    const ancho = page.viewportSize()!.width;
+
+    expect(caja).not.toBeNull();
+    expect(caja!.x).toBeGreaterThanOrEqual(0);
+    expect(caja!.x + caja!.width).toBeLessThanOrEqual(ancho + 1);
+  });
 });
