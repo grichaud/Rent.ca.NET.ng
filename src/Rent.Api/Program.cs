@@ -17,6 +17,7 @@ using Rent.Api.Features.Home;
 using Rent.Api.Features.Inquiries;
 using Rent.Api.Features.LandlordPortal;
 using Rent.Api.Features.Listings;
+using Rent.Api.Features.Maintenance;
 using Rent.Api.Features.Maps;
 using Rent.Api.Features.RenterPortal;
 using Rent.Api.Features.Search;
@@ -97,6 +98,9 @@ builder.Services.Configure<MapsOptions>(builder.Configuration.GetSection(MapsOpt
 
 builder.Services.Configure<AlertEngineOptions>(
     builder.Configuration.GetSection(AlertEngineOptions.SectionName));
+
+builder.Services.Configure<DatabaseOptions>(
+    builder.Configuration.GetSection(DatabaseOptions.SectionName));
 
 // Correo transaccional. Sin clave de Resend se usa el sustituto que solo escribe en el log,
 // para que un entorno sin credenciales siga permitiendo altas y restablecer contrasena.
@@ -215,6 +219,9 @@ app.MapFavoriteEndpoints();
 app.MapAlertEndpoints();
 app.MapAlertDispatchEndpoint();
 
+// Migraciones y siembra bajo demanda: el arranque ya no las hace. Ver DatabaseOptions.
+app.MapMaintenanceEndpoints();
+
 // Portal del renter (Fase 8).
 app.MapRenterPortalEndpoints();
 
@@ -241,7 +248,22 @@ if (!builder.Configuration.IsGoogleConfigured())
         "Google authentication not configured (missing Authentication:Google:ClientId/ClientSecret). External login disabled.");
 }
 
-if (!app.Environment.IsEnvironment("Testing"))
+// El arranque NO toca la base salvo que se pida expresamente.
+//
+// La base es Azure SQL serverless con auto-pausa, y despertarla cuesta **una hora entera** de
+// cuota por corta que sea la consulta: 60 minutos es el retardo minimo de auto-pausa que admite
+// Azure. Con el presupuesto gratuito (~55 horas al mes) eso son menos de dos despertares al dia.
+// Migrar y sembrar aqui convertia cada reinicio del App Service en una hora de cuota, y en F1 los
+// hay a diario aunque nadie visite.
+//
+// En desarrollo el valor por defecto es `true`: arrancar la API deja la base lista sin ceremonia
+// y de eso dependen los scripts de validacion y la suite E2E. En produccion lo dispara el
+// despliegue contra /api/maintenance/migrate.
+var migrateOnStartup = app.Configuration.GetValue<bool?>(
+    $"{DatabaseOptions.SectionName}:{nameof(DatabaseOptions.MigrateOnStartup)}")
+    ?? app.Environment.IsDevelopment();
+
+if (!app.Environment.IsEnvironment("Testing") && migrateOnStartup)
 {
     try
     {
@@ -255,6 +277,13 @@ if (!app.Environment.IsEnvironment("Testing"))
         app.Logger.LogError(ex,
             "Database initialization failed during startup. Starting the app anyway so it can serve requests and recover once the database resumes.");
     }
+}
+else if (!app.Environment.IsEnvironment("Testing"))
+{
+    app.Logger.LogInformation(
+        "Startup will not touch the database ({Section}:{Key} is off). Migrations and seeding run " +
+        "on demand via POST /api/maintenance/migrate, so a restart does not wake a paused database.",
+        DatabaseOptions.SectionName, nameof(DatabaseOptions.MigrateOnStartup));
 }
 
 app.Run();

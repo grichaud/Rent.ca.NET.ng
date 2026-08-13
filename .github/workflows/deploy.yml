@@ -2,13 +2,19 @@ name: Deploy
 
 # Publica las dos App Service. Se dispara al empujar a main y tambien a mano.
 #
-# No hay paso de migraciones: la API las aplica al arrancar, esperando antes a que la base
-# serverless salga de auto-pausa. Un `dotnet ef database update` desde el runner tendria ademas
-# que atravesar el firewall del servidor SQL, que hoy solo admite servicios de Azure.
-# Un commit de documentacion NO debe desplegar. Desplegar reinicia las dos apps, y arrancar
-# ejecuta migraciones y seeders, que **despiertan la base**: el despertar mas corto de Azure SQL
-# cuesta una hora entera de cuota, y el presupuesto son ~55 horas al mes. Un commit de markdown
-# no puede costar el 2% del mes.
+# LAS MIGRACIONES SON UN PASO DE ESTE PIPELINE, no del arranque de la app. Arrancar tocaba la
+# base, y despertar una base serverless en pausa cuesta **una hora entera** de cuota (60 min es
+# el retardo minimo de auto-pausa de Azure): cada reinicio del App Service —a diario en F1—
+# costaba una hora de las ~55 que da el plan gratuito al mes.
+#
+# El paso no usa `dotnet ef database update`: el firewall del servidor SQL solo admite servicios
+# de Azure y el principal de este workflow tiene `Website Contributor` acotado a las dos apps, sin
+# permiso para tocar reglas de firewall. Darselo seria bajar la seguridad para arreglar un
+# problema de coste. En su lugar se llama a un endpoint de la propia API, que ya tiene acceso
+# legitimo a la base.
+#
+# Un commit de documentacion NO despliega (`paths-ignore`): reiniciar por un markdown se llevaba
+# el 2% de la cuota del mes.
 on:
   push:
     branches: [main]
@@ -69,6 +75,41 @@ jobs:
             sleep 10
           done
           echo "La API no respondio tras el despliegue"; exit 1
+
+      # /health responde sin tocar la base, asi que el paso anterior NO prueba que la base este
+      # bien: ese es justamente el objetivo del diseno. Aqui se migra y se siembra, de forma
+      # explicita y una vez por despliegue, en vez de en cada reinicio.
+      - name: Migrar y sembrar la base
+        run: |
+          TOKEN=$(az webapp config appsettings list \
+            --name rent-ca-net-ng-api --resource-group rg-rent-ca-net \
+            --query "[?name=='Database__MaintenanceToken'].value | [0]" -o tsv)
+
+          # Se enmascara ANTES de cualquier uso: si el paso falla y GitHub vuelca el entorno, el
+          # token no puede acabar en un log publico.
+          echo "::add-mask::$TOKEN"
+
+          if [ -z "$TOKEN" ]; then
+            echo "Falta Database__MaintenanceToken en los ajustes de la API." >&2
+            echo "Sin el, la ruta de mantenimiento responde 404 y la base se queda sin migrar." >&2
+            exit 1
+          fi
+
+          # La base puede estar en auto-pausa: despertarla tarda. El endpoint ya espera por
+          # dentro, pero el reintento cubre que el worker acabe de arrancar.
+          for i in $(seq 1 5); do
+            code=$(curl -s -o /tmp/migrate.json -w '%{http_code}' -m 300 \
+              -X POST https://rent-ca-net-ng-api.azurewebsites.net/api/maintenance/migrate \
+              -H "X-Maintenance-Token: $TOKEN")
+            case "$code" in
+              200) echo "Base migrada y sembrada:"; cat /tmp/migrate.json; exit 0 ;;
+              409) echo "Ya hay una migracion en curso; se da por buena."; exit 0 ;;
+              404) echo "La ruta no existe: token sin configurar en la API." >&2; exit 1 ;;
+              401) echo "Token rechazado por la API." >&2; exit 1 ;;
+              *)   echo "Intento $i: HTTP $code"; cat /tmp/migrate.json 2>/dev/null; sleep 15 ;;
+            esac
+          done
+          echo "La migracion no llego a completarse." >&2; exit 1
 
   ssr:
     name: SSR (Angular + Node)
