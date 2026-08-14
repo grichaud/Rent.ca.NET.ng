@@ -15,7 +15,7 @@ import { toMetaDescription } from '../../core/seo/meta-text';
 import { SeoService } from '../../core/seo/seo.service';
 import { SITE_BASE_URL } from '../../core/seo/site-url';
 import { toFieldErrors } from '../auth/ui/auth-errors';
-import { formatPrice, formatTemplate } from '../../shared/format';
+import { formatLongDate, formatPrice, formatTemplate } from '../../shared/format';
 import { FavoriteButton } from '../../shared/ui/favorite-button';
 import { Icon } from '../../shared/ui/icon/icon';
 import { PropertyCardComponent } from '../../shared/ui/property-card';
@@ -276,7 +276,7 @@ const GALLERY_GRADIENTS = [
                                   {{ u.bedrooms === 0 ? ('listings.beds.studio' | transloco) : u.bedrooms }}
                                 </td>
                                 <td class="py-3 pr-4">{{ u.bathrooms }}</td>
-                                <td class="py-3 pr-4">{{ u.sqFt ? u.sqFt.toLocaleString('en-CA') : '—' }}</td>
+                                <td class="py-3 pr-4">{{ sqFtLabel(u.sqFt) }}</td>
                                 <td class="py-3 pr-4 font-semibold text-brand-600 dark:text-brand-400">
                                   {{ unitPrice(u.price, u.priceMax) }}{{ 'listings.perMonth' | transloco }}
                                 </td>
@@ -288,7 +288,7 @@ const GALLERY_GRADIENTS = [
                                     >
                                   } @else {
                                     <span class="text-slate-600 dark:text-white/60">{{
-                                      u.availableDate ?? ('detail.now' | transloco)
+                                      availableLabel(u.availableDate)
                                     }}</span>
                                   }
                                 </td>
@@ -414,31 +414,81 @@ const GALLERY_GRADIENTS = [
                     @for (message of inquiryErrors(); track message) {
                       <p role="alert" class="text-sm text-red-600 dark:text-red-400">{{ message }}</p>
                     }
-                    <input
-                      class="glass-input"
-                      formControlName="senderName"
-                      [placeholder]="'detail.formName' | transloco"
-                      autocomplete="name"
-                    />
-                    <input
-                      class="glass-input"
-                      type="email"
-                      formControlName="senderEmail"
-                      [placeholder]="'detail.formEmail' | transloco"
-                      autocomplete="email"
-                    />
-                    <input
-                      class="glass-input"
-                      type="tel"
-                      formControlName="senderPhone"
-                      [placeholder]="'detail.formPhone' | transloco"
-                      autocomplete="tel"
-                    />
-                    <textarea
-                      class="glass-input min-h-[110px]"
-                      formControlName="message"
-                      [placeholder]="'detail.formMessagePlaceholder' | transloco"
-                    ></textarea>
+                    <!--
+                      Etiquetas VISIBLES, no solo placeholder. El origen las tiene y no es
+                      cosmetico: un placeholder desaparece al escribir, asi que quien vuelve a
+                      revisar el formulario ya no sabe que pedia cada casilla, y los lectores de
+                      pantalla no lo anuncian de forma fiable.
+                    -->
+                    <div>
+                      <label for="inq-name" class="block text-xs font-medium text-slate-600 dark:text-white/60 mb-1">
+                        {{ 'detail.formName' | transloco }} *
+                      </label>
+                      <input
+                        id="inq-name"
+                        class="glass-input"
+                        formControlName="senderName"
+                        [placeholder]="'detail.formName' | transloco"
+                        autocomplete="name"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label for="inq-email" class="block text-xs font-medium text-slate-600 dark:text-white/60 mb-1">
+                        {{ 'detail.formEmail' | transloco }} *
+                      </label>
+                      <input
+                        id="inq-email"
+                        class="glass-input"
+                        type="email"
+                        formControlName="senderEmail"
+                        [placeholder]="'detail.formEmail' | transloco"
+                        autocomplete="email"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label for="inq-phone" class="block text-xs font-medium text-slate-600 dark:text-white/60 mb-1">
+                        {{ 'detail.formPhone' | transloco }}
+                      </label>
+                      <input
+                        id="inq-phone"
+                        class="glass-input"
+                        type="tel"
+                        formControlName="senderPhone"
+                        [placeholder]="'detail.formPhone' | transloco"
+                        autocomplete="tel"
+                      />
+                    </div>
+                    <!--
+                      La fecha de mudanza faltaba entera. No era solo un hueco visual: la API la
+                      acepta (InquiryRequest.MoveInDate) y el portal del propietario la PINTA en
+                      la bandeja, asi que hasta ahora esa columna llegaba siempre vacia.
+                    -->
+                    <div>
+                      <label for="inq-movein" class="block text-xs font-medium text-slate-600 dark:text-white/60 mb-1">
+                        {{ 'detail.formMoveIn' | transloco }}
+                      </label>
+                      <input
+                        id="inq-movein"
+                        class="glass-input"
+                        type="date"
+                        formControlName="moveInDate"
+                        [min]="today"
+                      />
+                    </div>
+                    <div>
+                      <label for="inq-message" class="block text-xs font-medium text-slate-600 dark:text-white/60 mb-1">
+                        {{ 'detail.formMessage' | transloco }} *
+                      </label>
+                      <textarea
+                        id="inq-message"
+                        class="glass-input min-h-[110px]"
+                        formControlName="message"
+                        [placeholder]="'detail.formMessagePlaceholder' | transloco"
+                        required
+                      ></textarea>
+                    </div>
                     <button
                       type="submit"
                       [disabled]="inquirySending()"
@@ -448,6 +498,22 @@ const GALLERY_GRADIENTS = [
                     </button>
                   </form>
                 }
+
+                <!--
+                  El asistente ya SABE que ficha esta abierta (aiContext.setProperty en el
+                  constructor), pero no habia nada que lo dijera: el boton flotante no anuncia
+                  que tiene contexto. Esta es la puerta que el origen si tiene.
+                  OJO: sin comillas de ningun tipo aqui dentro — un backtick en un comentario
+                  cierra la plantilla en linea y el error sale a decenas de lineas de distancia.
+                -->
+                <button
+                  type="button"
+                  (click)="askAiAboutListing()"
+                  class="glass-button w-full mt-3 py-2.5 text-sm font-semibold inline-flex items-center justify-center gap-2"
+                >
+                  <app-icon name="sparkles" class="h-4 w-4" />
+                  <span>{{ 'detail.askAi' | transloco }}</span>
+                </button>
               </div>
 
               @if (p.landlord; as landlord) {
@@ -481,6 +547,27 @@ const GALLERY_GRADIENTS = [
                   </a>
                 </div>
               }
+
+              <!--
+                Alta de alerta desde la ficha, como en el origen. El parametro showForm=true abre
+                el formulario ya desplegado al llegar, en vez de dejar al visitante frente a una
+                lista vacia sin saber que hacer.
+              -->
+              <a
+                [routerLink]="['/', culture.culture(), 'renter', 'alerts']"
+                [queryParams]="{ showForm: true }"
+                class="glass-card p-5 flex items-center gap-4 hover:border-brand-400/40 transition-colors duration-200"
+              >
+                <div
+                  class="h-10 w-10 rounded-full bg-brand-500/15 border border-brand-400/30 flex items-center justify-center shrink-0"
+                >
+                  <app-icon name="bell" class="h-5 w-5 text-brand-600 dark:text-brand-400" />
+                </div>
+                <div class="min-w-0">
+                  <p class="font-semibold text-slate-900 dark:text-white">{{ 'detail.setUpAlert' | transloco }}</p>
+                  <p class="text-sm text-slate-600 dark:text-white/60">{{ 'detail.getNotified' | transloco }}</p>
+                </div>
+              </a>
             </aside>
           </section>
 
@@ -602,8 +689,16 @@ export class ListingDetailPage {
     senderName: ['', Validators.required],
     senderEmail: ['', [Validators.required, Validators.email]],
     senderPhone: [''],
+    moveInDate: [''],
     message: ['', [Validators.required, Validators.minLength(10)]],
   });
+
+  /**
+   * Tope inferior del selector de fecha. La API rechaza una mudanza anterior a ayer
+   * (`InquiryRequestValidator`), asi que el navegador no debe dejar elegirla siquiera: es
+   * mejor no ofrecer una opcion que devolver un error despues de rellenar todo.
+   */
+  protected readonly today = new Date().toISOString().slice(0, 10);
 
   protected readonly inquirySending = signal(false);
   protected readonly inquirySent = signal(false);
@@ -674,7 +769,7 @@ export class ListingDetailPage {
     this.inquirySending.set(true);
     this.inquiryErrors.set([]);
 
-    const { senderName, senderEmail, senderPhone, message } = this.inquiryForm.getRawValue();
+    const { senderName, senderEmail, senderPhone, moveInDate, message } = this.inquiryForm.getRawValue();
 
     this.inquiries
       .submit({
@@ -683,7 +778,9 @@ export class ListingDetailPage {
         senderEmail,
         senderPhone: senderPhone || null,
         message,
-        moveInDate: null,
+        // Iba fijo a `null`: el campo no existia en el formulario aunque la API lo acepta y la
+        // bandeja del propietario lo pinta. La columna llegaba siempre vacia.
+        moveInDate: moveInDate || null,
         culture: this.culture.culture(),
       })
       .subscribe({
@@ -824,6 +921,26 @@ export class ListingDetailPage {
 
   protected unitPrice(price: number, priceMax: number | null): string {
     return priceMax ? `${formatPrice(price)}-${formatPrice(priceMax).slice(1)}` : formatPrice(price);
+  }
+
+  /**
+   * Fecha de disponibilidad de una unidad. El origen la pinta con
+   * `AvailableDate?.ToString("MMM d, yyyy")`; aqui salia el ISO en crudo ("2026-08-29"),
+   * que ademas ignoraba el idioma. `formatLongDate` ya existia y se usa igual en el portal
+   * del propietario y en las consultas del inquilino.
+   */
+  protected availableLabel(date: string | null | undefined): string {
+    return date ? formatLongDate(date, this.culture.culture()) : this.transloco.translate('detail.now');
+  }
+
+  /** Los miles tampoco pueden ir con `en-CA` fijo: en frances el separador es distinto. */
+  protected sqFtLabel(sqFt: number | null | undefined): string {
+    return sqFt ? sqFt.toLocaleString(this.culture.culture() === 'fr' ? 'fr-CA' : 'en-CA') : '—';
+  }
+
+  /** Abre el asistente, que ya tiene esta ficha como contexto. */
+  protected askAiAboutListing(): void {
+    this.aiContext.requestOpen();
   }
 
   protected viewAllLabel(count: number): string {

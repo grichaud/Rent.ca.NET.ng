@@ -74,6 +74,43 @@ test.describe('Recorrido publico', () => {
     await expect(page.getByRole('heading', { level: 1 })).toContainText('City not found');
   });
 
+  /**
+   * Paridad con el origen, comprobada el 2026-08-14 comparando las dos versiones desplegadas.
+   * La ficha se habia quedado sin cosas que el origen si tiene.
+   */
+  test('la ficha muestra la fecha de disponibilidad legible, no el ISO', async ({ page }) => {
+    await page.goto('/en/toronto/luxury-loft-liberty-village');
+
+    const tabla = page.getByRole('table');
+    await expect(tabla).toBeVisible();
+
+    // El origen la pinta con "MMM d, yyyy". Aqui salia "2026-08-29" en crudo.
+    await expect(tabla).not.toContainText(/\d{4}-\d{2}-\d{2}/);
+    await expect(tabla).toContainText(/[A-Z][a-z]{2} \d{1,2}, \d{4}|Now/);
+  });
+
+  test('el formulario de contacto pide fecha de mudanza y lleva etiquetas', async ({ page }) => {
+    await page.goto('/en/toronto/luxury-loft-liberty-village');
+
+    // El campo faltaba entero aunque la API lo acepta: la bandeja del propietario recibia
+    // siempre la columna vacia.
+    await expect(page.locator('#inq-movein')).toBeVisible();
+
+    // Etiquetas visibles, no solo placeholder: un placeholder desaparece al escribir.
+    for (const id of ['inq-name', 'inq-email', 'inq-phone', 'inq-movein', 'inq-message']) {
+      await expect(page.locator(`label[for="${id}"]`)).toBeVisible();
+    }
+  });
+
+  test('la ficha ofrece crear una alerta', async ({ page }) => {
+    await page.goto('/en/toronto/luxury-loft-liberty-village');
+
+    await page.getByRole('link', { name: /Set Up an Alert/i }).click();
+
+    // Sin sesion rebota al login, que es lo correcto: la alerta es de un inquilino.
+    await expect(page).toHaveURL(/\/en\/(login|renter\/alerts)/);
+  });
+
   test('el buscador de la home cabe en pantalla @mobile', async ({ page }) => {
     await page.goto('/en');
 

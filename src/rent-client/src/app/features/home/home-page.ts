@@ -3,6 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { catchError, of } from 'rxjs';
+import { AiContextService } from '../../core/ai/ai-context.service';
 import { ApiService } from '../../core/api/api.service';
 import { CultureService } from '../../core/i18n/culture.service';
 import { siteJsonLd } from '../../core/seo/json-ld';
@@ -291,6 +292,44 @@ const QUICK_CITIES = ['Toronto', 'Vancouver', 'Montreal', 'Calgary', 'Ottawa', '
           </a>
         </div>
       </section>
+
+      <!--
+        Seccion del asistente, que existe en el origen y aqui se habia quedado sin construir.
+        Las seis cadenas ya estaban traducidas en los dos idiomas desde la migracion y no las
+        usaba nadie: aiChat.cantFind, cantFindDesc, chatButton, freeToUse, noSignup y
+        available247. Sin esto, la unica pista del asistente era un circulo flotante sin texto.
+      -->
+      <section aria-labelledby="ai-assistant-heading">
+        <div class="glass-card-premium p-10 sm:p-14 text-center">
+          <span class="glass-highlight"></span>
+          <app-icon name="sparkles" class="h-10 w-10 mx-auto text-brand-500 mb-4" />
+          <h2
+            id="ai-assistant-heading"
+            class="font-sans font-bold tracking-tight text-3xl sm:text-4xl text-slate-900 dark:text-white"
+          >
+            {{ 'aiChat.cantFind' | transloco }}
+          </h2>
+          <p class="text-slate-600 dark:text-white/70 mt-3 max-w-xl mx-auto">
+            {{ 'aiChat.cantFindDesc' | transloco }}
+          </p>
+          <button
+            type="button"
+            (click)="openAssistant()"
+            class="glass-button-primary inline-flex items-center gap-2 mt-8"
+          >
+            <app-icon name="sparkles" class="h-4 w-4" />
+            <span>{{ 'aiChat.chatButton' | transloco }}</span>
+          </button>
+          <ul class="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-slate-600 dark:text-white/60">
+            @for (ventaja of aiHighlights; track ventaja) {
+              <li class="inline-flex items-center gap-2">
+                <app-icon name="shield-check" class="h-4 w-4 text-emerald-500" />
+                {{ ventaja | transloco }}
+              </li>
+            }
+          </ul>
+        </div>
+      </section>
     </div>
   `,
 })
@@ -299,6 +338,15 @@ export class HomePage {
   private readonly router = inject(Router);
   private readonly transloco = inject(TranslocoService);
   protected readonly culture = inject(CultureService);
+  private readonly aiContext = inject(AiContextService);
+
+  /** Las tres ventajas que el origen enumera bajo el boton del asistente. */
+  protected readonly aiHighlights = ['aiChat.freeToUse', 'aiChat.noSignup', 'aiChat.available247'];
+
+  /** Abre el widget del asistente desde la seccion de la home. */
+  protected openAssistant(): void {
+    this.aiContext.requestOpen();
+  }
 
   private readonly seo = inject(SeoService);
   private readonly siteUrl = inject(SITE_BASE_URL);

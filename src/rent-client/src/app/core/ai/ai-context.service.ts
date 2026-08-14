@@ -18,4 +18,22 @@ export class AiContextService {
   setProperty(id: string | null): void {
     this.currentPropertyId.set(id);
   }
+
+  /**
+   * Peticiones de apertura del asistente desde otras pantallas.
+   *
+   * El origen ofrece dos puertas de entrada al chat ademas del boton flotante: "Ask AI About
+   * This Listing" en la ficha y "Chat with our AI Assistant" en la home. Ninguna existia aqui,
+   * asi que la unica forma de descubrir el asistente era adivinar que el circulito de la esquina
+   * hace algo — y desde la ficha, ademas, no habia nada que dijera que el chat YA sabe que
+   * propiedad estas mirando.
+   *
+   * Es un contador y no un booleano a proposito: si fuera booleano, pedir abrir dos veces
+   * seguidas (abrir, cerrar a mano, volver a pulsar) no emitiria cambio la segunda vez.
+   */
+  readonly openRequests = signal(0);
+
+  requestOpen(): void {
+    this.openRequests.update((n) => n + 1);
+  }
 }

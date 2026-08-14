@@ -1,0 +1,148 @@
+Rent
+.ca
+.NET
+NG
+Rent
+Landlords
+About
+FR
+Sign In
+Sign Up
+Rentals in Toronto
+Find apartments, condos, houses and more in Toronto
+Filters
+PROPERTY TYPE
+Apartment
+Condo
+House
+Townhouse
+Basement
+Studio
+Loft
+Duplex
+PRICE RANGE
+$0
+$5,000+
+$0 – $5,000+/mo
+BEDROOMS
+Any
+1
+2
+3
+4+
+BATHROOMS
+Any
+1
+2
+3+
+MORE FILTERS
+Pet-friendly
+Furnished
+Parking
+Clear
+Apply
+8 rentals in Toronto
+Newest
+Price: Low to High
+Price: High to Low
+Most Popular
+FEATURED
+HALF MONTH OFF + NO ADMIN FEES
+VERIFIED
+$2,650 – $3,550/mo
+Luxury Loft in Liberty Village
+Liberty Village, Toronto, ON
+1–2 Beds
+·
+1 Bath
+·
+Loft
+Furnished
+FEATURED
+FIRST MONTH FREE
+VERIFIED
+$2,350 – $4,700/mo
+Modern Condo in the Heart of Downtown Toronto
+King West, Toronto, ON
+1–3 Beds
+·
+1 Bath
+·
+Condo
+Pet-friendly
+PROMOTED
+VERIFIED
+$1,850 – $1,950/mo
+Spacious 2BR Apartment in Leslieville
+Leslieville, Toronto, ON
+2 Beds
+·
+1 Bath
+·
+Apartment
+Pet-friendly
+PROMOTED
+VERIFIED
+$1,250 – $2,950/mo
+Charming Townhouse in Riverdale
+Riverdale, Toronto, ON
+1–3 Beds
+·
+1 Bath
+·
+Townhouse
+Pet-friendly
+$1,450/mo
+Cozy Studio near University of Toronto
+The Annex, Toronto, ON
+Studio
+·
+1 Bath
+·
+Studio
+Furnished
+$1,580/mo
+Renovated Basement Suite in Bloor West Village
+Bloor West Village, Toronto, ON
+1 Bed
+·
+1 Bath
+·
+Basement
+Pet-friendly
+$1,950/mo
+Modern Apartment in Riverdale
+Riverdale, Toronto, ON
+1 Bed
+·
+1 Bath
+·
+Apartment
+Pet-friendly
+Furnished
+$1,550/mo
+Cozy Studio near Riverdale Park
+Riverdale, Toronto, ON
+Studio
+·
+1 Bath
+·
+Studio
+Pet-friendly
+Rent
+.ca
+.NET
+NG
+Find your next home in Canada.
+Thousands of verified listings across all major cities.
+QUICK LINKS
+About
+FAQ
+Privacy
+Next.js version
+FOR LANDLORDS
+List Your Property
+Pricing
+Landlord Dashboard
+© 2026 Rent.ca. All rights reserved.
+Built with care for renters across Canada.

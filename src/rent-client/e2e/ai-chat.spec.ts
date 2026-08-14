@@ -1,4 +1,11 @@
-import { expect, test } from '@playwright/test';
+import { Page, expect, test } from '@playwright/test';
+
+/**
+ * El circulito de la esquina. Se localiza por `aria-controls` y no por su nombre accesible
+ * porque desde el 2026-08-14 hay DOS entradas al chat con el mismo nombre —esta y el boton de
+ * la seccion del asistente en la home— y buscar por nombre resuelve a dos elementos.
+ */
+const botonFlotante = (page: Page) => page.locator('button[aria-controls="ai-chat-panel"]');
 
 /**
  * El widget del asistente.
@@ -16,7 +23,7 @@ test.describe('Asistente de IA', () => {
   test('el widget abre, manda un mensaje y recibe respuesta a trozos', async ({ page }) => {
     await page.goto('/en');
 
-    await page.getByRole('button', { name: 'Chat with our AI Assistant' }).click();
+    await botonFlotante(page).click();
 
     const panel = page.getByRole('dialog');
     await expect(panel).toBeVisible();
@@ -36,7 +43,7 @@ test.describe('Asistente de IA', () => {
 
   test('el hilo sobrevive a una recarga', async ({ page }) => {
     await page.goto('/en');
-    await page.getByRole('button', { name: 'Chat with our AI Assistant' }).click();
+    await botonFlotante(page).click();
 
     const panel = page.getByRole('dialog');
     await panel.getByRole('textbox').fill('Un mensaje que debe persistir');
@@ -44,7 +51,7 @@ test.describe('Asistente de IA', () => {
     await expect(panel).toContainText('Un mensaje que debe persistir');
 
     await page.reload();
-    await page.getByRole('button', { name: 'Chat with our AI Assistant' }).click();
+    await botonFlotante(page).click();
 
     // El hilo se recupera de `/api/ai/conversation`: la cookie de sesion del chat lo identifica
     // aunque el visitante sea anonimo.
@@ -65,6 +72,28 @@ test.describe('Asistente de IA', () => {
   test('no aparece en las pantallas de autenticacion', async ({ page }) => {
     await page.goto('/en/login');
 
-    await expect(page.getByRole('button', { name: 'Chat with our AI Assistant' })).toHaveCount(0);
+    await expect(botonFlotante(page)).toHaveCount(0);
+  });
+
+  /**
+   * Las dos puertas de entrada que el origen tiene y que aqui faltaban. Se descubrieron
+   * comparando el texto de las dos versiones el 2026-08-14: las seis cadenas de la seccion
+   * estaban traducidas en ingles y frances desde la migracion y no las usaba nadie.
+   */
+  test('la seccion de la home abre el asistente', async ({ page }) => {
+    await page.goto('/en');
+
+    await expect(page.getByRole('heading', { name: "Can't find what you're looking for?" })).toBeVisible();
+    await page.getByRole('button', { name: 'Chat with our AI Assistant' }).first().click();
+
+    await expect(page.getByRole('dialog')).toBeVisible();
+  });
+
+  test('la ficha ofrece preguntar por ESA propiedad', async ({ page }) => {
+    await page.goto('/en/toronto/luxury-loft-liberty-village');
+
+    await page.getByRole('button', { name: 'Ask AI About This Listing' }).click();
+
+    await expect(page.getByRole('dialog')).toBeVisible();
   });
 });

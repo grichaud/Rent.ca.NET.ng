@@ -245,6 +245,17 @@ export class AiChatWidget {
         if (element) element.scrollTop = element.scrollHeight;
       });
     });
+
+    // Otras pantallas pueden pedir que el chat se abra ("Ask AI About This Listing" en la ficha,
+    // "Chat with our AI Assistant" en la home). Se ignora el valor inicial: el efecto corre una
+    // vez al crearse y sin esto el widget arrancaria abierto en cada carga.
+    let atendidas = this.aiContext.openRequests();
+    effect(() => {
+      const pedidas = this.aiContext.openRequests();
+      if (pedidas === atendidas) return;
+      atendidas = pedidas;
+      if (!this.open()) this.toggle();
+    });
   }
 
   protected toggle(): void {
