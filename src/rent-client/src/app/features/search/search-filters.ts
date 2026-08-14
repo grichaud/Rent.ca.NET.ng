@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { PropertyType } from '../../core/api/api.types';
@@ -224,6 +226,9 @@ export class SearchFilters {
   readonly citySlug = input.required<string>();
   readonly initial = input.required<FilterState>();
 
+  /** Se emite al aplicar o limpiar; el cajon de movil lo usa para cerrarse. */
+  readonly applied = output<void>();
+
   protected readonly cap = PRICE_CAP;
   protected readonly pillClass = PILL_CLASS;
   protected readonly pillActive = PILL_ACTIVE;
@@ -302,6 +307,10 @@ export class SearchFilters {
   protected readonly trackRight = computed(() => 100 - (this.state().maxPrice / PRICE_CAP) * 100);
 
   protected apply(): void {
+    // Quien lo monta en el cajon de movil necesita saberlo para cerrarlo. No basta con vigilar
+    // la query: aplicar SIN cambiar nada no la mueve, y el cajon se quedaria abierto.
+    this.applied.emit();
+
     const s = this.state();
     this.router.navigate(['/', this.culture.culture(), this.citySlug()], {
       queryParams: {

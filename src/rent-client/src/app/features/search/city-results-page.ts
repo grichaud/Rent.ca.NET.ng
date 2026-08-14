@@ -189,7 +189,11 @@ const CITY_NOT_FOUND: SearchResponse = {
                 aria-modal="true"
                 [attr.aria-label]="'filters.title' | transloco"
               >
-                <app-search-filters [citySlug]="citySlug()" [initial]="filters()" />
+                <app-search-filters
+                  [citySlug]="citySlug()"
+                  [initial]="filters()"
+                  (applied)="closeFilters()"
+                />
               </aside>
             </div>
           }
@@ -245,6 +249,7 @@ export class CityResultsPage {
 
   constructor() {
     effect(() => this.applySeo());
+
   }
 
   protected openFilters(): void {

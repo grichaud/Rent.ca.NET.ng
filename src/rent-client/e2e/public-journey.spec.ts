@@ -148,7 +148,11 @@ test.describe('Recorrido publico', () => {
     await abrir.click();
     const cajon = page.getByRole('dialog', { name: 'Filters' });
     await expect(cajon).toBeVisible();
-    await expect(cajon.getByRole('button', { name: 'Apply' })).toBeVisible();
+
+    // Y al aplicar tiene que quitarse de en medio: se quedaba abierto tapando justo el
+    // resultado que el usuario acababa de pedir (visto en produccion, no en local).
+    await cajon.getByRole('button', { name: 'Apply' }).click();
+    await expect(cajon).toBeHidden();
   });
 
   test('la ficha deja compartir el anuncio', async ({ page }) => {
