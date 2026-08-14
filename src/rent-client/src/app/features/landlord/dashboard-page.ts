@@ -7,6 +7,7 @@ import { LandlordService } from '../../core/api/landlord.service';
 import { CultureService } from '../../core/i18n/culture.service';
 import { formatLongDate, formatTemplate } from '../../shared/format';
 import { Icon } from '../../shared/ui/icon/icon';
+import { applyPrivatePageTitle } from '../../core/seo/static-seo';
 
 /** Port de LandlordManage/Pages/Dashboard.cshtml. */
 @Component({
@@ -197,6 +198,10 @@ import { Icon } from '../../shared/ui/icon/icon';
   `,
 })
 export class LandlordDashboardPage {
+  constructor() {
+    applyPrivatePageTitle('landlord.dashboardTitle');
+  }
+
   protected readonly culture = inject(CultureService);
   private readonly landlord = inject(LandlordService);
   private readonly transloco = inject(TranslocoService);

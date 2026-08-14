@@ -5,7 +5,8 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { catchError, of, switchMap } from 'rxjs';
 import { AdminAiConversation, AdminService, AiMessageRole } from '../../core/api/admin.service';
 import { CultureService } from '../../core/i18n/culture.service';
-import { formatStamp } from './admin-ui';
+import { formatStamp, formatStampWithSeconds } from './admin-ui';
+import { applyPrivatePageTitle } from '../../core/seo/static-seo';
 
 /** Cada rol con su color; Tool comparte el ambar del panel porque es maquinaria interna. */
 const ROLE_CLASSES: Record<AiMessageRole, string> = {
@@ -86,7 +87,7 @@ const ROLE_CLASSES: Record<AiMessageRole, string> = {
                   }}</span>
                 }
                 <span class="ml-auto text-[10px] text-slate-400 dark:text-white/40">{{
-                  stamp(message.createdAt)
+                  stampWithSeconds(message.createdAt)
                 }}</span>
               </div>
 
@@ -135,6 +136,7 @@ export class AdminAiConversationPage {
   protected readonly notFound = signal(false);
 
   constructor() {
+    applyPrivatePageTitle('admin.aiConversationTitle');
     // Por paramMap y no por snapshot: navegar de una conversacion a otra reutiliza el
     // componente (misma ruta, otro :id) y con el snapshot se quedaria la primera.
     this.route.paramMap
@@ -160,6 +162,10 @@ export class AdminAiConversationPage {
 
   protected stamp(value: string): string {
     return formatStamp(value);
+  }
+
+  protected stampWithSeconds(value: string): string {
+    return formatStampWithSeconds(value);
   }
 
   /** Los 8 primeros caracteres bastan para reconocer una sesion sin ocupar la celda entera. */

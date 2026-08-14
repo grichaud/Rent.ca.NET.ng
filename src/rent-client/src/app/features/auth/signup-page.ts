@@ -9,6 +9,7 @@ import { Icon } from '../../shared/ui/icon/icon';
 import { generalErrors, toFieldErrors } from './ui/auth-errors';
 import { GoogleButton } from './ui/google-button';
 import { PasswordField } from './ui/password-field';
+import { applyPrivatePageTitle } from '../../core/seo/static-seo';
 
 /** Port de Features/Auth/Pages/Signup.cshtml. */
 @Component({
@@ -158,6 +159,10 @@ import { PasswordField } from './ui/password-field';
   `,
 })
 export class SignupPage {
+  constructor() {
+    applyPrivatePageTitle('auth.createAccount');
+  }
+
   protected readonly auth = inject(AuthService);
   protected readonly culture = inject(CultureService);
   private readonly router = inject(Router);

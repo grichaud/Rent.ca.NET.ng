@@ -75,11 +75,11 @@ test.describe('Portal del propietario', () => {
     await visitante.goto('/en/toronto');
     await visitante.getByText(titulo).first().click();
     await visitante.getByPlaceholder('Full Name').fill('Interesado E2E');
-    await visitante.getByPlaceholder('Your email').fill('interesado@e2e.local');
+    await visitante.getByPlaceholder('you@example.com').fill('interesado@e2e.local');
     await visitante.getByPlaceholder("Hi, I'm interested in this rental...").fill(
       'Buenas, me interesa este piso y querria verlo esta semana.',
     );
-    await visitante.getByRole('button', { name: 'Send inquiry' }).click();
+    await visitante.getByRole('button', { name: 'Send Message' }).click();
     await expect(visitante.getByRole('status')).toContainText('Your message has been sent');
     await anonimo.close();
 

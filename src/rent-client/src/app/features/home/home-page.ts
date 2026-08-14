@@ -118,6 +118,26 @@ const QUICK_CITIES = ['Toronto', 'Vancouver', 'Montreal', 'Calgary', 'Ottawa', '
           </button>
         </form>
 
+        <!--
+          Atajo al asistente desde el propio hero, debajo del buscador. Estaba traducido
+          (hero.aiCta) y sin usar: quien no encuentra lo que busca en el buscador lo tiene
+          justo debajo, sin bajar hasta la seccion del asistente.
+        -->
+        <div class="mt-4 flex justify-center">
+          <button
+            type="button"
+            (click)="openAssistant()"
+            [attr.aria-label]="'hero.aiCta' | transloco"
+            class="glass-button group inline-flex items-center gap-2 !px-5 !py-2.5 text-sm text-slate-600 hover:text-slate-900 dark:text-white/70 dark:hover:text-white"
+          >
+            <app-icon
+              name="sparkles"
+              class="h-4 w-4 text-brand-500 dark:text-brand-400 group-hover:text-cyan-500 dark:group-hover:text-cyan-400 transition-colors duration-300"
+            />
+            <span>{{ 'hero.aiCta' | transloco }}</span>
+          </button>
+        </div>
+
         <nav class="mt-10 flex flex-wrap justify-center gap-2" aria-label="Popular cities">
           @for (name of quickCities; track name) {
             <a

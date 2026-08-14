@@ -6,6 +6,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { catchError, of, switchMap } from 'rxjs';
 import { AdminService, AdminUserRow } from '../../core/api/admin.service';
 import { AdminFlash, adminErrorMessage, formatDay } from './admin-ui';
+import { applyPrivatePageTitle } from '../../core/seo/static-seo';
 
 /** Cada rol tiene el color de su portal: admin ambar, landlord brand, renter rosa. */
 const ROLE_CLASSES: Record<string, string> = {
@@ -134,6 +135,7 @@ export class AdminUsersPage {
   });
 
   constructor() {
+    applyPrivatePageTitle('admin.usersTitle');
     // switchMap sobre la URL: el filtro cambia sin destruir el componente (misma ruta, otra
     // query) y una respuesta que llegue tarde no puede pisar al filtro activo.
     this.route.queryParamMap

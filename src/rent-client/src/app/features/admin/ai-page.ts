@@ -7,6 +7,7 @@ import { catchError, of, switchMap } from 'rxjs';
 import { AdminAi, AdminService } from '../../core/api/admin.service';
 import { CultureService } from '../../core/i18n/culture.service';
 import { formatStamp } from './admin-ui';
+import { applyPrivatePageTitle } from '../../core/seo/static-seo';
 
 const EMPTY: AdminAi = {
   totalConversations: 0,
@@ -197,6 +198,7 @@ export class AdminAiPage {
   });
 
   constructor() {
+    applyPrivatePageTitle('admin.aiTitle');
     this.route.queryParamMap
       .pipe(
         switchMap((params) =>

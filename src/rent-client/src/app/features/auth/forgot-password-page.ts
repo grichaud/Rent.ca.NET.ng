@@ -7,6 +7,7 @@ import { FieldErrors } from '../../core/auth/auth.types';
 import { CultureService } from '../../core/i18n/culture.service';
 import { Icon } from '../../shared/ui/icon/icon';
 import { generalErrors, toFieldErrors } from './ui/auth-errors';
+import { applyPrivatePageTitle } from '../../core/seo/static-seo';
 
 /** Port de Features/Auth/Pages/ForgotPassword.cshtml. */
 @Component({
@@ -93,6 +94,10 @@ import { generalErrors, toFieldErrors } from './ui/auth-errors';
   `,
 })
 export class ForgotPasswordPage {
+  constructor() {
+    applyPrivatePageTitle('auth.forgotTitle');
+  }
+
   private readonly auth = inject(AuthService);
   private readonly fb = inject(FormBuilder);
   private readonly transloco = inject(TranslocoService);

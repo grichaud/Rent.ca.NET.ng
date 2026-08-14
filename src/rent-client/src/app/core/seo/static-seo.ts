@@ -13,6 +13,24 @@ import { SeoService } from './seo.service';
  * el idioma cambia sin que el componente se reconstruya. Hoy el conmutador navega a la otra
  * URL y si lo reconstruye, pero de esta forma la correccion no depende de ese detalle.
  */
+/**
+ * `<title>` de una pantalla privada (portales y autenticacion).
+ *
+ * No lleva descripcion ni datos estructurados: nada de esto se indexa, y de hecho se marca
+ * `noindex`. Pero el titulo SI importa — es lo que distingue una pestaña de otra cuando alguien
+ * tiene abiertos el portal, la bandeja y una ficha, y el origen lo pone en todas.
+ */
+export function applyPrivatePageTitle(titleKey: string): void {
+  const seo = inject(SeoService);
+  const transloco = inject(TranslocoService);
+  const culture = inject(CultureService);
+
+  effect(() => {
+    culture.culture();
+    seo.apply({ title: transloco.translate(titleKey), noIndex: true });
+  });
+}
+
 export function applyStaticSeo(
   titleKey: string,
   descriptionKey: string,

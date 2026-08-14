@@ -8,6 +8,7 @@ import { CultureService } from '../../core/i18n/culture.service';
 import { Icon } from '../../shared/ui/icon/icon';
 import { generalErrors, toFieldErrors } from './ui/auth-errors';
 import { PasswordField } from './ui/password-field';
+import { applyPrivatePageTitle } from '../../core/seo/static-seo';
 
 /**
  * Port de Features/Auth/Pages/ResetPassword.cshtml.
@@ -121,6 +122,7 @@ export class ResetPasswordPage {
   });
 
   constructor() {
+    applyPrivatePageTitle('auth.resetTitle');
     if (!this.email() || !this.token) {
       this.tokenInvalid.set(true);
       this.checking.set(false);

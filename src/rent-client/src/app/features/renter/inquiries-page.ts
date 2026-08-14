@@ -7,6 +7,7 @@ import { RenterService } from '../../core/api/renter.service';
 import { CultureService } from '../../core/i18n/culture.service';
 import { formatLongDate, formatTemplate } from '../../shared/format';
 import { Icon } from '../../shared/ui/icon/icon';
+import { applyPrivatePageTitle } from '../../core/seo/static-seo';
 
 /** Port de RenterPortal/Pages/Inquiries.cshtml: las consultas que el renter ha enviado. */
 @Component({
@@ -114,6 +115,10 @@ import { Icon } from '../../shared/ui/icon/icon';
   `,
 })
 export class RenterInquiriesPage {
+  constructor() {
+    applyPrivatePageTitle('renter.inquiriesTitle');
+  }
+
   protected readonly culture = inject(CultureService);
   private readonly renter = inject(RenterService);
   private readonly transloco = inject(TranslocoService);

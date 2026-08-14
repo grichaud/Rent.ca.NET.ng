@@ -107,7 +107,7 @@ const GALLERY_GRADIENTS = [
                     'hidden md:block relative overflow-hidden group cursor-pointer border-0 p-0 ' +
                     slot.corner + ' bg-gradient-to-br ' + gradients[slot.index % gradients.length]
                   "
-                  [attr.aria-label]="'View photo ' + (slot.index + 1)"
+                  [attr.aria-label]="'View photo ' + (slot.index + 1) + ': ' + slotAlt(p, slot.index)"
                 >
                   @if (slot.image) {
                     <img
@@ -150,18 +150,34 @@ const GALLERY_GRADIENTS = [
             <span class="text-slate-700 dark:text-white/80 truncate max-w-[40ch]">{{ p.title }}</span>
           </nav>
 
+          <!--
+            El banner de promocion, con el mismo peso visual que en el origen: una promocion de
+            mudanza es un argumento de venta y aqui quedaba como una nota al margen. El
+            antetitulo (detail.specialOffer) estaba traducido y sin usar.
+          -->
           @if (p.activeSpecial; as special) {
-            <div
-              class="glass-card p-4 mb-4 border-l-4 border-amber-400 bg-gradient-to-r from-amber-50/60 to-transparent dark:from-amber-500/10"
+            <section
+              class="relative overflow-hidden rounded-2xl border border-orange-300/60 dark:border-orange-500/30 bg-gradient-to-r from-amber-400/90 via-orange-500/90 to-rose-500/90 p-5 text-white shadow-lg shadow-orange-500/30 my-6"
             >
-              <p class="inline-flex items-center gap-2 font-semibold text-amber-700 dark:text-amber-300">
-                <app-icon name="sparkles" class="h-4 w-4" />
-                {{ special.title }}
-              </p>
-              @if (special.description) {
-                <p class="text-sm text-slate-600 dark:text-white/70 mt-1">{{ special.description }}</p>
-              }
-            </div>
+              <div class="absolute inset-0 opacity-20 mix-blend-overlay" aria-hidden="true">
+                <div class="absolute -top-8 -right-8 h-32 w-32 rounded-full bg-white/40 blur-2xl"></div>
+                <div class="absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-yellow-200/60 blur-2xl"></div>
+              </div>
+              <div class="relative flex items-start gap-4">
+                <div class="shrink-0 h-10 w-10 rounded-xl bg-white/25 backdrop-blur-sm flex items-center justify-center">
+                  <app-icon name="sparkles" class="h-5 w-5" />
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-[11px] uppercase tracking-widest font-semibold text-white/85">
+                    {{ 'detail.specialOffer' | transloco }}
+                  </div>
+                  <div class="text-lg sm:text-xl font-bold leading-tight mt-0.5">{{ special.title }}</div>
+                  @if (special.description) {
+                    <p class="mt-1 text-sm text-white/90 whitespace-pre-line">{{ special.description }}</p>
+                  }
+                </div>
+              </div>
+            </section>
           }
 
           <section class="grid lg:grid-cols-[1fr_400px] gap-8 mt-2">
@@ -177,6 +193,19 @@ const GALLERY_GRADIENTS = [
                       [propertyId]="p.id"
                       [initialFavorited]="p.isFavorited"
                     />
+                    <!--
+                      Compartir el anuncio: API nativa donde exista (movil) y copiar el enlace
+                      donde no. Estaba traducido en los dos idiomas y sin construir.
+                    -->
+                    <button
+                      type="button"
+                      (click)="shareListing(p.title)"
+                      [attr.aria-label]="shareLabel()"
+                      [attr.title]="shareLabel()"
+                      class="h-11 w-11 inline-flex items-center justify-center rounded-full bg-white/80 dark:bg-slate-900/60 backdrop-blur-md text-slate-700 dark:text-white/80 hover:text-brand-500 hover:scale-110 transition-all duration-200 shadow-sm border border-gray-200 dark:border-white/10"
+                    >
+                      <app-icon name="share-2" class="h-5 w-5" />
+                    </button>
                   </div>
                 </div>
                 <p class="text-slate-600 dark:text-white/60 mt-2 inline-flex items-start gap-1.5">
@@ -434,15 +463,17 @@ const GALLERY_GRADIENTS = [
                       />
                     </div>
                     <div>
+                      <!-- La etiqueta es auth.email ("Email"), la misma que usa el origen aqui.
+                           detail.formEmail ("Your email") es el texto del marcador. -->
                       <label for="inq-email" class="block text-xs font-medium text-slate-600 dark:text-white/60 mb-1">
-                        {{ 'detail.formEmail' | transloco }} *
+                        {{ 'auth.email' | transloco }} *
                       </label>
                       <input
                         id="inq-email"
                         class="glass-input"
                         type="email"
                         formControlName="senderEmail"
-                        [placeholder]="'detail.formEmail' | transloco"
+                        [placeholder]="'auth.emailPlaceholder' | transloco"
                         autocomplete="email"
                         required
                       />
@@ -494,7 +525,7 @@ const GALLERY_GRADIENTS = [
                       [disabled]="inquirySending()"
                       class="glass-button-primary w-full py-2.5 text-sm font-semibold disabled:opacity-60"
                     >
-                      {{ 'detail.sendInquiry' | transloco }}
+                      {{ 'detail.sendMessage' | transloco }}
                     </button>
                   </form>
                 }
@@ -715,6 +746,54 @@ export class ListingDetailPage {
     inject(DestroyRef).onDestroy(() => this.aiContext.setProperty(null));
 
     effect(() => this.applySeo());
+
+    // El mensaje llega escrito, como en el origen: el visitante solo tiene que pulsar enviar.
+    // Se rehace si cambia de ficha o de idioma, pero NO pisa lo que el usuario haya escrito.
+    effect(() => {
+      const p = this.listing();
+      const plantilla = this.prefillTemplate();
+      if (!p || p.id === '') return;
+      const control = this.inquiryForm.controls.message;
+      if (control.dirty) return;
+      control.setValue(formatTemplate(plantilla, p.title));
+    });
+  }
+
+  /** Texto del boton de compartir; pasa a "enlace copiado" un instante tras copiar. */
+  protected readonly shareCopied = signal(false);
+  protected readonly shareLabel = computed(() =>
+    this.transloco.translate(this.shareCopied() ? 'detail.linkCopied' : 'detail.share'),
+  );
+
+  /** Se lee como señal para que el mensaje prellenado se rehaga al cambiar de idioma. */
+  private readonly prefillTemplate = computed(() => {
+    this.culture.culture();
+    return this.transloco.translate('detail.prefillMessage');
+  });
+
+  /**
+   * Compartir: API nativa donde exista (movil), copiar el enlace donde no. Si el navegador no
+   * ofrece ninguna de las dos, el boton no hace nada — igual que en el origen.
+   */
+  protected async shareListing(title: string): Promise<void> {
+    if (!this.isBrowser) return;
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, url });
+      } catch {
+        // El usuario cancelo el dialogo del sistema: no es un error que contar.
+      }
+      return;
+    }
+    if (!navigator.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      this.shareCopied.set(true);
+      setTimeout(() => this.shareCopied.set(false), 1500);
+    } catch {
+      // Sin permiso de portapapeles no hay nada que hacer.
+    }
   }
 
   /**

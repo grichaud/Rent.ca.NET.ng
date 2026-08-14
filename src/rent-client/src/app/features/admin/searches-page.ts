@@ -6,6 +6,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { Subject, catchError, merge, of, switchMap } from 'rxjs';
 import { AdminSearchRow, AdminService } from '../../core/api/admin.service';
 import { AdminFlash, adminErrorMessage, formatStamp } from './admin-ui';
+import { applyPrivatePageTitle } from '../../core/seo/static-seo';
 
 /**
  * Port de Admin/Pages/Searches.cshtml: el top 20 de busquedas por uso, para limpiar erratas
@@ -200,6 +201,7 @@ export class AdminSearchesPage {
   private readonly reload$ = new Subject<void>();
 
   constructor() {
+    applyPrivatePageTitle('admin.searchesTitle');
     merge(this.route.queryParamMap, this.reload$)
       .pipe(
         switchMap(() => {

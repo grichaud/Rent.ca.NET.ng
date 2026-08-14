@@ -9,6 +9,7 @@ import { FieldErrors } from '../../core/auth/auth.types';
 import { toFieldErrors } from '../auth/ui/auth-errors';
 import { PasswordField } from '../auth/ui/password-field';
 import { Icon } from '../../shared/ui/icon/icon';
+import { applyPrivatePageTitle } from '../../core/seo/static-seo';
 
 /** Port de RenterPortal/Pages/Account.cshtml: perfil y cambio de contrasena. */
 @Component({
@@ -229,6 +230,7 @@ export class RenterAccountPage {
   });
 
   constructor() {
+    applyPrivatePageTitle('renter.accountTitle');
     // El formulario existe antes que la respuesta del perfil: se rellena cuando llega —
     // pero solo si esta intacto, para no pisar lo que el usuario ya escribio si la
     // respuesta llega tarde.

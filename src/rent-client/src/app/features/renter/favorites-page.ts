@@ -6,6 +6,7 @@ import { PropertyCard, PropertyType } from '../../core/api/api.types';
 import { CultureService } from '../../core/i18n/culture.service';
 import { formatPrice, formatTemplate } from '../../shared/format';
 import { Icon } from '../../shared/ui/icon/icon';
+import { applyPrivatePageTitle } from '../../core/seo/static-seo';
 
 const TYPE_KEYS: Partial<Record<PropertyType, string>> = {
   Apartment: 'filters.apartment',
@@ -210,6 +211,7 @@ export class RenterFavoritesPage {
   protected readonly flashSuccess = signal<string | null>(null);
 
   constructor() {
+    applyPrivatePageTitle('renter.favoritesTitle');
     this.favoritesService.list().subscribe({
       next: (cards) => this.favorites.set(cards),
       error: () => this.favorites.set([]),

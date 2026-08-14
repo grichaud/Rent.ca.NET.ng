@@ -12,6 +12,7 @@ import { CultureService } from '../../core/i18n/culture.service';
 import { formatPrice, formatTemplate } from '../../shared/format';
 import { toFieldErrors } from '../auth/ui/auth-errors';
 import { Icon } from '../../shared/ui/icon/icon';
+import { applyPrivatePageTitle } from '../../core/seo/static-seo';
 
 const TYPE_KEYS: Partial<Record<PropertyType, string>> = {
   Apartment: 'filters.apartment',
@@ -388,6 +389,7 @@ export class RenterAlertsPage {
   });
 
   constructor() {
+    applyPrivatePageTitle('renter.alertsTitle');
     this.load();
   }
 

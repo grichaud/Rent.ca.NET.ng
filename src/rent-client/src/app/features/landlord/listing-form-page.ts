@@ -16,6 +16,7 @@ import { CultureService } from '../../core/i18n/culture.service';
 import { formatTemplate } from '../../shared/format';
 import { toFieldErrors } from '../auth/ui/auth-errors';
 import { Icon } from '../../shared/ui/icon/icon';
+import { applyPrivatePageTitle } from '../../core/seo/static-seo';
 
 const PROVINCES = ['AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'NT', 'NU', 'ON', 'PE', 'QC', 'SK', 'YT'];
 
@@ -664,6 +665,8 @@ export class LandlordListingFormPage {
   });
 
   constructor() {
+    applyPrivatePageTitle(this.isEdit() ? 'landlord.listingsEdit' : 'landlord.formCreateTitle');
+
     if (this.listingId) {
       this.landlord.listing(this.listingId).subscribe({
         next: (detail) => {

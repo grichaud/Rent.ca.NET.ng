@@ -46,16 +46,16 @@ test.describe('Recorrido publico', () => {
     await page.locator('app-property-card a').first().click();
 
     await page.getByPlaceholder('Full Name').fill('Visitante E2E');
-    await page.getByPlaceholder('Your email').fill('visitante@e2e.local');
+    await page.getByPlaceholder('you@example.com').fill('visitante@e2e.local');
     await page.getByPlaceholder("Hi, I'm interested in this rental...").fill(
       'Me interesa este piso, sigue disponible? Enviado desde la suite E2E.',
     );
-    await page.getByRole('button', { name: 'Send inquiry' }).click();
+    await page.getByRole('button', { name: 'Send Message' }).click();
 
     // El formulario se sustituye por el acuse de recibo: dejarlo a la vista invita a mandar la
     // misma consulta dos veces.
     await expect(page.getByRole('status')).toContainText('Your message has been sent');
-    await expect(page.getByRole('button', { name: 'Send inquiry' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Send Message' })).toHaveCount(0);
   });
 
   test('el corazon manda al login a quien no tiene sesion', async ({ page }) => {
@@ -63,7 +63,7 @@ test.describe('Recorrido publico', () => {
 
     // Anonimo, el corazon es un ENLACE al login con returnUrl, no un boton: pulsarlo y acabar
     // en un formulario de sesion es el comportamiento correcto.
-    await page.getByLabel('Save to favorites').first().click();
+    await page.getByLabel('Log in to save').first().click();
 
     await expect(page).toHaveURL(/\/en\/login\?returnUrl=/);
   });
@@ -127,5 +127,61 @@ test.describe('Recorrido publico', () => {
     expect(caja).not.toBeNull();
     expect(caja!.x).toBeGreaterThanOrEqual(0);
     expect(caja!.x + caja!.width).toBeLessThanOrEqual(ancho + 1);
+  });
+
+  /**
+   * Segunda pasada de paridad (2026-08-14), esta vez sobre los portales y el movil. Lo que
+   * sigue son las diferencias que salieron y que ninguna prueba cubria.
+   */
+  test('en movil se pueden abrir los filtros @mobile', async ({ page }) => {
+    // El proyecto `chromium` corre TAMBIEN los tests marcados @mobile, asi que el ancho se fija
+    // aqui a proposito: si no, en escritorio el boton esta oculto por diseño y el test falla
+    // sin que haya nada roto.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/en/toronto');
+
+    // La barra lateral esta oculta por debajo de lg. Sin este boton los filtros existian y no
+    // habia forma de llegar a ellos: desde el telefono no se podia filtrar.
+    const abrir = page.getByRole('button', { name: 'Filters' });
+    await expect(abrir).toBeVisible();
+
+    await abrir.click();
+    const cajon = page.getByRole('dialog', { name: 'Filters' });
+    await expect(cajon).toBeVisible();
+    await expect(cajon.getByRole('button', { name: 'Apply' })).toBeVisible();
+  });
+
+  test('la ficha deja compartir el anuncio', async ({ page }) => {
+    await page.goto('/en/toronto/luxury-loft-liberty-village');
+
+    await expect(page.getByRole('button', { name: 'Share listing' })).toBeVisible();
+  });
+
+  test('el mensaje del formulario llega escrito', async ({ page }) => {
+    await page.goto('/en/toronto/luxury-loft-liberty-village');
+
+    // El origen lo prellena con el titulo del anuncio: quien pregunta solo tiene que enviar.
+    await expect(page.locator('#inq-message')).toHaveValue(/Luxury Loft in Liberty Village/);
+  });
+
+  test('con un solo resultado el contador va en singular', async ({ page }) => {
+    await page.goto('/en/toronto?types=Basement');
+
+    // Decia "1 rentals in Toronto". El origen cambia de frase entera, no solo de numero.
+    await expect(page.getByText('1 rental in')).toBeVisible();
+  });
+
+  test('el hero ofrece preguntar al asistente', async ({ page }) => {
+    await page.goto('/en');
+
+    await expect(page.getByRole('button', { name: /Ask our AI/i })).toBeVisible();
+  });
+
+  test('las pantallas privadas tienen titulo propio', async ({ page }) => {
+    // Sin sesion, /renter rebota al login: lo que se comprueba es el titulo de esa pantalla,
+    // que tambien lo tenia en blanco.
+    await page.goto('/en/login');
+
+    await expect(page).toHaveTitle('Sign In - Rent.ca');
   });
 });

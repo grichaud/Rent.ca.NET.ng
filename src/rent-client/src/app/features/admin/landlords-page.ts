@@ -16,6 +16,7 @@ import {
   fromLocalInput,
   toLocalInput,
 } from './admin-ui';
+import { applyPrivatePageTitle } from '../../core/seo/static-seo';
 
 const TIERS: ListingTier[] = ['Limited', 'Promoted', 'Featured'];
 
@@ -196,6 +197,7 @@ export class AdminLandlordsPage {
   });
 
   constructor() {
+    applyPrivatePageTitle('admin.landlordsTitle');
     this.route.queryParamMap
       .pipe(
         switchMap((params) =>

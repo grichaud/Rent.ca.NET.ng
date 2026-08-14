@@ -17,6 +17,7 @@ import {
   fromLocalInput,
   toLocalInput,
 } from './admin-ui';
+import { applyPrivatePageTitle } from '../../core/seo/static-seo';
 
 const TIERS: ListingTier[] = ['Limited', 'Promoted', 'Featured'];
 const STATUSES: ListingStatus[] = ['Draft', 'Active', 'Inactive', 'Archived'];
@@ -215,6 +216,7 @@ export class AdminPropertiesPage {
   });
 
   constructor() {
+    applyPrivatePageTitle('admin.propertiesTitle');
     this.route.queryParamMap
       .pipe(
         switchMap((params) =>

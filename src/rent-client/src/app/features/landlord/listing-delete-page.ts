@@ -4,6 +4,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { LandlordService } from '../../core/api/landlord.service';
 import { CultureService } from '../../core/i18n/culture.service';
 import { Icon } from '../../shared/ui/icon/icon';
+import { applyPrivatePageTitle } from '../../core/seo/static-seo';
 
 /**
  * Port de LandlordManage/Pages/Listings/Delete.cshtml: pantalla de confirmacion. Es un soft
@@ -70,6 +71,7 @@ export class LandlordListingDeletePage {
   protected readonly busy = signal(false);
 
   constructor() {
+    applyPrivatePageTitle('landlord.deleteTitle');
     this.landlord.listing(this.listingId).subscribe({
       next: (detail) => this.title.set(detail.title),
       error: () => this.notFound.set(true),

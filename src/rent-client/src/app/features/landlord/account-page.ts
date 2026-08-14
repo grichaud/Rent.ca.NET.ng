@@ -9,6 +9,7 @@ import { FieldErrors } from '../../core/auth/auth.types';
 import { toFieldErrors } from '../auth/ui/auth-errors';
 import { PasswordField } from '../auth/ui/password-field';
 import { Icon } from '../../shared/ui/icon/icon';
+import { applyPrivatePageTitle } from '../../core/seo/static-seo';
 
 /**
  * Port de LandlordManage/Pages/Account.cshtml: perfil + marca (empresa, web, bio) y cambio
@@ -324,6 +325,7 @@ export class LandlordAccountPage {
   });
 
   constructor() {
+    applyPrivatePageTitle('landlord.accountTitle');
     effect(() => {
       const profile = this.profile();
       // Solo si el formulario esta intacto: si la respuesta llega tarde y el usuario ya

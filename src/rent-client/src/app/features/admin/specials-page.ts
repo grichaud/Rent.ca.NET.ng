@@ -15,6 +15,7 @@ import {
   fromLocalInput,
   toLocalInput,
 } from './admin-ui';
+import { applyPrivatePageTitle } from '../../core/seo/static-seo';
 
 const EMPTY: AdminSpecials = {
   rows: [],
@@ -301,6 +302,7 @@ export class AdminSpecialsPage {
   private readonly reload$ = new Subject<void>();
 
   constructor() {
+    applyPrivatePageTitle('admin.specialsTitle');
     merge(this.route.queryParamMap, this.reload$)
       .pipe(
         switchMap(() => {

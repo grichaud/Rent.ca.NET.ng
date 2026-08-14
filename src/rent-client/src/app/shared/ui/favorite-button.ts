@@ -42,10 +42,15 @@ import { Icon } from './icon/icon';
         </button>
       }
     } @else {
+      <!--
+        Sin sesion el corazon NO guarda: lleva al login. Por eso se anuncia como "Log in to
+        save" y no como "Save to favorites", que prometeria algo que no va a pasar.
+      -->
       <a
         [routerLink]="['/', culture.culture(), 'login']"
         [queryParams]="{ returnUrl: loginReturnUrl() }"
-        [attr.aria-label]="'detail.saveToFavorites' | transloco"
+        [attr.aria-label]="'detail.loginToSave' | transloco"
+        [attr.title]="'detail.loginToSave' | transloco"
         [class]="buttonClass()"
       >
         <app-icon name="heart" [class]="iconClass()" fill="none" />

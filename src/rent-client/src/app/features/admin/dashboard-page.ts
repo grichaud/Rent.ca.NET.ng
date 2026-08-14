@@ -7,6 +7,7 @@ import { AdminService } from '../../core/api/admin.service';
 import { CultureService } from '../../core/i18n/culture.service';
 import { formatTemplate } from '../../shared/format';
 import { Icon } from '../../shared/ui/icon/icon';
+import { applyPrivatePageTitle } from '../../core/seo/static-seo';
 
 /**
  * Port de Admin/Pages/Index.cshtml: cuatro accesos con la cifra que justifica entrar.
@@ -124,6 +125,10 @@ import { Icon } from '../../shared/ui/icon/icon';
   `,
 })
 export class AdminDashboardPage {
+  constructor() {
+    applyPrivatePageTitle('admin.dashboardTitle');
+  }
+
   protected readonly culture = inject(CultureService);
   private readonly admin = inject(AdminService);
   private readonly transloco = inject(TranslocoService);

@@ -130,6 +130,20 @@ export function formatStamp(iso: string | null | undefined): string {
   return `${formatDay(iso)} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+/**
+ * `yyyy-MM-dd HH:mm:ss` en local, o guion si no hay valor.
+ *
+ * Los mensajes de una conversacion con el asistente llegan seguidos: sin los segundos, la
+ * pregunta y su respuesta muestran la misma hora y no se ve cuanto tardo. El origen los pinta
+ * aqui y solo aqui.
+ */
+export function formatStampWithSeconds(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '—';
+  return `${formatStamp(iso)}:${pad(date.getSeconds())}`;
+}
+
 /** `yyyy-MM-dd` en local, o guion si no hay valor. */
 export function formatDay(iso: string | null | undefined): string {
   if (!iso) return '—';

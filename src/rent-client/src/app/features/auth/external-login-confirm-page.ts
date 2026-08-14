@@ -7,6 +7,7 @@ import { FieldErrors, Role } from '../../core/auth/auth.types';
 import { CultureService } from '../../core/i18n/culture.service';
 import { Icon } from '../../shared/ui/icon/icon';
 import { generalErrors, toFieldErrors } from './ui/auth-errors';
+import { applyPrivatePageTitle } from '../../core/seo/static-seo';
 
 /**
  * Port de Features/Auth/Pages/ExternalLoginConfirm.cshtml: ultimo paso del alta con Google,
@@ -149,6 +150,7 @@ export class ExternalLoginConfirmPage {
   });
 
   constructor() {
+    applyPrivatePageTitle('auth.externalConfirmTitle2');
     // Los datos viven en la cookie externa, que caduca a los 30 minutos. Si ya no esta, no hay
     // nada que confirmar: se vuelve al login con el motivo.
     this.auth.externalPending().subscribe((pending) => {

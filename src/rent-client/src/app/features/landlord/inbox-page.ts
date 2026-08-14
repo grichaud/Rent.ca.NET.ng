@@ -7,6 +7,7 @@ import { LandlordInbox, LandlordService } from '../../core/api/landlord.service'
 import { CultureService } from '../../core/i18n/culture.service';
 import { formatLongDate, formatTemplate } from '../../shared/format';
 import { Icon } from '../../shared/ui/icon/icon';
+import { applyPrivatePageTitle } from '../../core/seo/static-seo';
 
 /**
  * Port de LandlordManage/Pages/Inbox.cshtml. El filtro vive en la URL (`?filter=unread`),
@@ -164,6 +165,7 @@ export class LandlordInboxPage {
   private readonly reload$ = new Subject<void>();
 
   constructor() {
+    applyPrivatePageTitle('landlord.inboxTitle');
     // Una sola carga en vuelo: el filtro puede cambiar sin destruir el componente (misma
     // ruta, query distinta) y el toggle tambien recarga. Con switchMap, la peticion vieja
     // se cancela y una respuesta fuera de orden no puede pisar el filtro activo.

@@ -1,5 +1,15 @@
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectionStrategy, Component, PLATFORM_ID, RESPONSE_INIT, computed, effect, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  HostListener,
+  PLATFORM_ID,
+  RESPONSE_INIT,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -55,6 +65,20 @@ const CITY_NOT_FOUND: SearchResponse = {
             </aside>
 
             <div class="flex flex-col gap-4 min-w-0">
+              <!--
+                Por debajo de lg la barra lateral esta oculta, asi que sin este boton no habia
+                NINGUNA forma de filtrar desde el telefono: los filtros existian y eran
+                inalcanzables. El origen resuelve igual, con un cajon lateral.
+              -->
+              <button
+                type="button"
+                (click)="openFilters()"
+                class="glass-button lg:hidden inline-flex items-center justify-center gap-2 px-4 py-2 text-sm text-gray-800 dark:text-white/80 self-start"
+              >
+                <app-icon name="sliders-horizontal" class="h-4 w-4" />
+                {{ 'filters.openFilters' | transloco }}
+              </button>
+
               <!-- Controles de resultados -->
               <div
                 class="glass-base flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3"
@@ -68,11 +92,12 @@ const CITY_NOT_FOUND: SearchResponse = {
                 -->
                 <p class="text-sm text-gray-600 dark:text-white/70">
                   {{ resultsLabel().before
-                  }}<span class="font-semibold text-base text-gray-900 dark:text-white">{{
-                    res.totalCount
-                  }}</span
+                  }}@if (resultsLabel().showCount) {<span
+                      class="font-semibold text-base text-gray-900 dark:text-white"
+                      >{{ res.totalCount }}</span
+                    >}{{ resultsLabel().mid
+                  }}<span class="font-medium text-gray-900 dark:text-white">{{ res.city.name }}</span
                   >{{ resultsLabel().after }}
-                  <span class="font-medium text-gray-900 dark:text-white">{{ res.city.name }}</span>
                 </p>
 
                 <div class="flex flex-wrap items-center justify-end gap-2 sm:flex-nowrap sm:flex-shrink-0">
@@ -145,6 +170,29 @@ const CITY_NOT_FOUND: SearchResponse = {
               }
             </div>
           </div>
+
+          <!--
+            El cajon de filtros de movil. Se monta solo cuando se abre para no duplicar los
+            controles en el HTML servido (dos juegos de filtros con los mismos ids confundirian
+            al lector de pantalla y al buscador).
+          -->
+          @if (filtersOpen()) {
+            <div class="fixed inset-0 z-50 lg:hidden">
+              <div
+                (click)="closeFilters()"
+                class="absolute inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm"
+                aria-hidden="true"
+              ></div>
+              <aside
+                class="absolute top-0 left-0 bottom-0 w-80 max-w-[90vw] overflow-y-auto p-3"
+                role="dialog"
+                aria-modal="true"
+                [attr.aria-label]="'filters.title' | transloco"
+              >
+                <app-search-filters [citySlug]="citySlug()" [initial]="filters()" />
+              </aside>
+            </div>
+          }
         }
       } @else {
         <p class="text-gray-500 dark:text-white/60">{{ 'common.loading' | transloco }}</p>
@@ -170,20 +218,47 @@ export class CityResultsPage {
    */
   protected readonly mapFilters = computed<ApiFilters>(() => this.apiFilters());
 
+  /** Si esta abierto el cajon de filtros de movil. En pantalla grande la barra lateral es fija. */
+  protected readonly filtersOpen = signal(false);
+
   /**
-   * El contador de resultados, partido por su marcador para poder resaltar el numero.
+   * El contador de resultados, partido por sus marcadores para poder resaltar el numero y la
+   * ciudad.
+   *
+   * Con UN solo resultado el origen cambia de frase entera ("1 rental in Toronto"), no solo de
+   * numero: el plural pegado a un uno canta. Por eso hay dos claves y en la singular el numero
+   * va DENTRO del texto, sin resaltar — de ahi `showCount`.
    *
    * Depende de la cultura activa para rehacerse al cambiar de idioma: en frances la frase es
    * "{0} locations à", no una traduccion palabra por palabra de la inglesa.
    */
   protected readonly resultsLabel = computed(() => {
     this.culture.culture();
-    const [before, after = ''] = this.transloco.translate('listings.resultsCount').split('{0}');
-    return { before, after };
+    if (this.result()?.totalCount === 1) {
+      const [before, after = ''] = this.transloco.translate('results.headerCountSingular').split('{0}');
+      return { before, showCount: false, mid: '', after };
+    }
+    const [before, rest = ''] = this.transloco.translate('results.headerCountPlural').split('{0}');
+    const [mid, after = ''] = rest.split('{1}');
+    return { before, showCount: true, mid, after };
   });
 
   constructor() {
     effect(() => this.applySeo());
+  }
+
+  protected openFilters(): void {
+    this.filtersOpen.set(true);
+  }
+
+  protected closeFilters(): void {
+    this.filtersOpen.set(false);
+  }
+
+  /** Escape cierra el cajon, como en el origen. */
+  @HostListener('document:keydown.escape')
+  protected onEscape(): void {
+    this.closeFilters();
   }
 
   /**

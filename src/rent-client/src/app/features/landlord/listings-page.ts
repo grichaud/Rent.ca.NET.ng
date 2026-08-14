@@ -5,6 +5,7 @@ import { LandlordService, LandlordListingRow, ListingStatus } from '../../core/a
 import { CultureService } from '../../core/i18n/culture.service';
 import { formatPrice, formatTemplate } from '../../shared/format';
 import { Icon } from '../../shared/ui/icon/icon';
+import { applyPrivatePageTitle } from '../../core/seo/static-seo';
 
 const STATUS_KEYS: Record<ListingStatus, string> = {
   Active: 'landlord.statusActive',
@@ -175,6 +176,7 @@ export class LandlordListingsPage {
   protected readonly flashWarning = signal<string | null>(null);
 
   constructor() {
+    applyPrivatePageTitle('landlord.listingsTitle');
     // El TempData del SPA: crear/editar/desactivar navegan aqui con las claves en el estado.
     // Se lee getCurrentNavigation(), NO lastSuccessfulNavigation(): el router asigna esta
     // ultima DESPUES de activar el componente, asi que en el constructor todavia apunta a la

@@ -7,6 +7,7 @@ import { RenterService } from '../../core/api/renter.service';
 import { CultureService } from '../../core/i18n/culture.service';
 import { formatTemplate } from '../../shared/format';
 import { Icon } from '../../shared/ui/icon/icon';
+import { applyPrivatePageTitle } from '../../core/seo/static-seo';
 
 interface StatCard {
   segment: string;
@@ -111,6 +112,10 @@ interface StatCard {
   `,
 })
 export class RenterDashboardPage {
+  constructor() {
+    applyPrivatePageTitle('renter.dashboardTitle');
+  }
+
   protected readonly culture = inject(CultureService);
   private readonly renter = inject(RenterService);
   private readonly transloco = inject(TranslocoService);
