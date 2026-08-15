@@ -1,0 +1,88 @@
+# Disparador del motor de alertas.
+#
+# El App Service corre en plan F1: no admite Always On, asi que el proceso se descarga tras un
+# rato sin trafico y un temporizador DENTRO de la app dispararia de forma erratica o no
+# dispararia. Por eso el planificador vive fuera, aqui, y la app solo expone la ruta.
+#
+# Cada hora, que es la cadencia para la que esta escrito el motor: `AlertSchedule` da por
+# cumplida una alerta diaria a las 23h y una semanal a los 7 dias menos una, justo para que unos
+# minutos de desfase del planificador no empujen el envio al turno siguiente y conviertan un
+# digest "diario" en uno cada dos dias.
+name: Alerts
+
+on:
+  schedule:
+    # El cron de GitHub va en UTC y no es puntual: puede retrasarse bastantes minutos cuando hay
+    # cola. Da igual — quien decide si una alerta toca es el motor leyendo LastSentAt, no la hora
+    # a la que entra la peticion.
+    - cron: '0 * * * *'
+  # Para poder dispararlo a mano desde la pestana Actions sin esperar a la hora en punto.
+  workflow_dispatch:
+
+# Si un tic tarda mas que el hueco hasta el siguiente, no se encabalgan. La API tambien se
+# defiende sola (devuelve 409 si ya hay una pasada en vuelo), pero es mejor no llegar a pedirlo.
+concurrency:
+  group: alerts-dispatch
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Enviar los digests que toquen
+        env:
+          TOKEN: ${{ secrets.ALERTS_DISPATCH_TOKEN }}
+          API: https://rent-ca-net-ng-api.azurewebsites.net
+        run: |
+          set -euo pipefail
+
+          if [ -z "${TOKEN}" ]; then
+            echo "Falta el secreto ALERTS_DISPATCH_TOKEN del repositorio." >&2
+            exit 1
+          fi
+
+          # Se pega a la API directamente y no al sitio: el SSR reenviaria igual, pero
+          # despertaria dos procesos en vez de uno para nada.
+          #
+          # --retry cubre el arranque en frio: la primera peticion del dia puede encontrarse el
+          # proceso descargado. Sin -f para poder LEER el cuerpo cuando el codigo no es 2xx;
+          # el estado se comprueba abajo a mano.
+          estado=$(curl -sS --retry 3 --retry-all-errors --retry-delay 10 --max-time 120 \
+            -o respuesta.json -w '%{http_code}' \
+            -X POST "${API}/api/alerts/dispatch" \
+            -H "X-Alerts-Token: ${TOKEN}" \
+            -H 'Content-Length: 0')
+
+          echo "HTTP ${estado}"
+          cat respuesta.json
+          echo
+
+          case "${estado}" in
+            200)
+              # El resumen al log del run: considered/due/sent/failed. Es la unica ventana que
+              # hay a si el motor esta haciendo algo, porque nadie mira los logs del App Service.
+              echo "### Alertas" >> "$GITHUB_STEP_SUMMARY"
+              echo '```json' >> "$GITHUB_STEP_SUMMARY"
+              cat respuesta.json >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            409)
+              # Ya hay una pasada en vuelo. No es un fallo: la anterior sigue trabajando.
+              echo "Ya habia una ejecucion en curso; este tic no hace nada."
+              ;;
+            404)
+              echo "La API responde 404: Alerts__DispatchToken no esta configurado alli." >&2
+              exit 1
+              ;;
+            401)
+              echo "Token rechazado: el secreto del repositorio no coincide con el del App Service." >&2
+              exit 1
+              ;;
+            *)
+              echo "Respuesta inesperada (${estado})." >&2
+              exit 1
+              ;;
+          esac
