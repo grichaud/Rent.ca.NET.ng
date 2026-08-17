@@ -54,3 +54,15 @@ Thumbs.db
 
 # Claude Code runtime lock (ephemeral, machine-local — never commit)
 .claude/scheduled_tasks.lock
+
+# ── La fabrica de agentes NO se publica (decision de Gio, 2026-08-17) ──
+# El codigo de los agentes es privado; lo que se publica es la aplicacion.
+# Estas rutas se purgaron del historial completo con git-filter-repo ese dia.
+.claude/
+CLAUDE.md
+AGENTS.md
+**/AGENTS.md
+.mcp.json
+BASELINE.md
+ESTADO.md
+REPORTE-FABRICA-*.md
