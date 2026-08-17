@@ -57,4 +57,6 @@ The API reads its configuration from user secrets / environment variables &mdash
 
 ---
 
-**This is a portfolio demo, not a commercial site.** It runs on seed data and is not affiliated with any existing rental company. Built and documented from source, 2026.
+**This is a demo, not a commercial site.** It runs on seed data and is not affiliated with any existing rental company. Built and documented from source, 2026.
+
+> **Note on the `Alerts` workflow:** it runs on a schedule, and this repository is public, so GitHub's 60-day auto-disable applies &mdash; after 60 days with no repository activity the schedule is switched off and does not come back on its own. Check the Actions tab if the digest goes quiet.
