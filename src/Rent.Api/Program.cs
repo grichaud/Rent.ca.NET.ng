@@ -79,7 +79,7 @@ builder.Services
 builder.Services.AddAuthorization();
 
 // Cookie adaptada a SPA (401/403 bajo /api), cookie externa de 30 min, Google si esta
-// configurado y antiforgery con el nombre de cabecera que usa Angular. Fase 6 del PRP.
+// configurado y antiforgery con el nombre de cabecera que usa Angular.
 builder.Services.AddSpaAuthentication(builder.Configuration);
 
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();

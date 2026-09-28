@@ -6,8 +6,8 @@ import { InjectionToken, PLATFORM_ID, REQUEST_CONTEXT, inject } from '@angular/c
  *
  * Es lo que se escribe en `canonical`, en los `hreflang`, en `og:url` y en las URLs absolutas
  * del JSON-LD. **No es `API_BASE_URL`**: esa apunta al backend, que el navegador nunca ve. Ya
- * se pago una vez esa confusion (ver el aprendizaje de `/add-payments` en CLAUDE.md: un
- * `success_url` construido sobre el host de la pasarela aterrizaba al usuario en la API).
+ * se pago una vez esa confusion en otro proyecto: un `success_url` construido sobre el host de
+ * la pasarela aterrizaba al usuario en la API.
  *
  * De donde sale, por orden:
  *

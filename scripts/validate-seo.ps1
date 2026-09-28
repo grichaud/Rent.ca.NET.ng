@@ -80,7 +80,7 @@ Check 'La home tiene titulo propio en ingles' (
   $titleEn -match 'Find Your' -and $titleEn -match 'Rent\.ca$'
 ) "<title>$titleEn</title>"
 
-# La prueba que pide el PRP: si el frances devolviera el titulo ingles, el SSR no estaria
+# La prueba que importa: si el frances devolviera el titulo ingles, el SSR no estaria
 # cumpliendo su unico proposito.
 Check 'La home cambia de titulo en frances' (
   $titleFr -ne $titleEn -and $titleFr -match 'Trouvez'

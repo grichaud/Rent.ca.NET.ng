@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 namespace Rent.Api.Tests;
 
 /// <summary>
-/// Cubre los tres riesgos que el PRP marca como ALTO en la fase de autenticacion: que la API
+/// Cubre los tres riesgos ALTOS de la fase de autenticacion: que la API
 /// responda con codigos y no con redirecciones, que el antiforgery bloquee lo que debe, y que
 /// la cookie de sesion sostenga realmente la identidad entre peticiones.
 /// </summary>

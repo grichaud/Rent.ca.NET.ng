@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 namespace Rent.Api.Tests;
 
 /// <summary>
-/// Las cabeceras de cache de los endpoints publicos (Fase 14, PRP 12.3).
+/// Las cabeceras de cache de los endpoints publicos (por la cuota del plan F1).
 ///
 /// No es una prueba de rendimiento: es de AISLAMIENTO. Las respuestas publicas de este
 /// catalogo no son iguales para todo el mundo —`isFavorited` depende de quien pregunta—, asi

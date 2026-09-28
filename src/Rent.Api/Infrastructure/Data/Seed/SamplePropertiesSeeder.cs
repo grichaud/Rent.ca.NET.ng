@@ -13,7 +13,7 @@ public static class SamplePropertiesSeeder
 
     /// <summary>
     /// Solo para desarrollo, igual que <see cref="AdminUserSeeder.DevelopmentPassword"/>: esta
-    /// en el codigo y en BASELINE.md, asi que es publica.
+    /// en el codigo, asi que es publica.
     ///
     /// Este propietario es el dueno de TODO el catalogo de demo. Sembrar una contrasena conocida
     /// en una URL abierta a internet dejaria que cualquiera que lea el repositorio entre al portal

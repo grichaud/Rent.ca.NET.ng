@@ -46,7 +46,7 @@ Write-Output '--------------------------------------------- ------- ------'
 foreach ($r in $routes) {
   $html = (curl.exe -s ("http://localhost:4000" + $r[0])) -join "`n"
   $okContent = [bool]($html -match $r[1])
-  $noPlaceholder = -not [bool]($html -match 'fase posterior del PRP')
+  $noPlaceholder = -not [bool]($html -match 'fase posterior')
   $status = if ($okContent -and $noPlaceholder) { 'OK' } elseif (-not $noPlaceholder) { 'PLACEHOLDER' } else { 'FALTA' }
   Write-Output ("{0,-45} {1,7} {2}" -f $r[0], $html.Length, $status)
 }

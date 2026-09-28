@@ -5,7 +5,7 @@ namespace Rent.Api.Infrastructure.Http;
 /// <summary>
 /// Marca un endpoint publico como cacheable por el navegador.
 ///
-/// Existe por la cuota del plan F1 (PRP 12.3): cada llamada que se ahorra es CPU que no se
+/// Existe por la cuota del plan F1: cada llamada que se ahorra es CPU que no se
 /// gasta y, sobre todo, una consulta que no despierta la base gratuita — que al despertarse
 /// cobra una hora entera de cuota porque el retardo minimo de auto-pausa es de 60 minutos.
 ///

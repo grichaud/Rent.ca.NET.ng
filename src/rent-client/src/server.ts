@@ -223,7 +223,7 @@ interface SitemapFeed {
  * El sitemap se cachea en memoria.
  *
  * Construirlo obliga a la API a recorrer el catalogo entero, y el plan F1 del despliegue tiene
- * 60 minutos de CPU al dia (PRP 12.3): un rastreador insistente los quemaria el solo. El
+ * 60 minutos de CPU al dia: un rastreador insistente los quemaria el solo. El
  * catalogo cambia en horas, no en segundos, asi que servir una version de hace un rato no
  * pierde nada.
  */
@@ -308,7 +308,7 @@ function escapeXml(value: string): string {
 /**
  * Cache en memoria del HTML renderizado.
  *
- * En el plan F1 esto no es una optimizacion, es lo que mantiene la app viva (PRP 12.3). Cada
+ * En el plan F1 esto no es una optimizacion, es lo que mantiene la app viva. Cada
  * visita renderiza en servidor Y pide datos a la API, y hay dos cuotas que se agotan a la vez:
  *
  * - Los **60 minutos de CPU al dia** compartidos por SSR y API. Al superarlos, las dos apps se

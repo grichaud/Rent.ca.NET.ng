@@ -113,7 +113,7 @@ $rejected = curl.exe -s -o NUL -w '%{http_code}' -H 'Host: evil.example.com' "$s
 Check 'El host de despliegue se acepta' ($allowed -eq '200') "$azure_host -> $allowed"
 Check 'Un host ajeno se rechaza' ($rejected -eq '400') "evil.example.com -> $rejected"
 
-# 8) Cache del SSR (PRP 12.3). Lo que se comprueba no es la velocidad: es que una pagina
+# 8) Cache del SSR (por la cuota de CPU del plan F1). Lo que se comprueba no es la velocidad: es que una pagina
 #    PERSONAL no acabe nunca en una cache compartida.
 #    Se usa una URL con query propia porque el arranque del script ya pidio /en y esa entrada
 #    esta caliente.
